@@ -108,11 +108,15 @@ pub fn sprite_name_for_tile(
     match tile {
         Tile::Agent(agent) if actions.contains_key(agent) => Some(format!(
             "{}{}",
-            if agent.0 % 2 == 0 { "Orange" } else { "Yellow" },
+            if agent.0.is_multiple_of(2) {
+                "Orange"
+            } else {
+                "Yellow"
+            },
             actions.get(agent).unwrap().sprite_name(),
         )),
         Tile::Tree(height) => Some(format!("Tree{}_3", height.get().min(3))),
-        Tile::Agent(agent) => Some(if agent.0 % 2 == 0 {
+        Tile::Agent(agent) => Some(if agent.0.is_multiple_of(2) {
             "OrangeRight".to_owned()
         } else {
             "YellowRight".to_owned()

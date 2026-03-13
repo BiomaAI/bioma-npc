@@ -29,10 +29,10 @@ The root `Cargo.toml` defines a three-crate Rust workspace with historical direc
 - `TERM=xterm cargo run -p bioma-npc-core --example ecosystem`: ecosystem example; `TERM=xterm` avoids `clearscreen` panics in minimal terminals.
 - `cargo run -p lumberjacks --bin lumberjacks -- --batch -s turns=10 -s mcts.visits=100 --output /tmp/lumber-smoke scenario-lumberjacks/experiments/base.json`: practical headless smoke test for the lumberjacks scenario.
 
-On Linux, `lumberjacks` needs `libudev-dev` and `libasound2-dev`. Its first build is much slower than the core examples because `--batch` still compiles `ggez`.
+On Linux, `lumberjacks` needs `libudev-dev` and `libasound2-dev`. Its first build is much slower than the core examples because it compiles the Bevy renderer/audio stack even in headless mode.
 
 ## Coding Style & Naming Conventions
-This workspace targets Rust 2021 and follows `rustfmt` defaults with 4-space indentation. Use `UpperCamelCase` for types and traits, `snake_case` for modules, files, functions, and tests, and `SCREAMING_SNAKE_CASE` for constants.
+`npc-engine-core` and `npc-engine-utils` target Rust 2021, while `scenario-lumberjacks` targets Rust 2024. Follow `rustfmt` defaults with 4-space indentation. Use `UpperCamelCase` for types and traits, `snake_case` for modules, files, functions, and tests, and `SCREAMING_SNAKE_CASE` for constants.
 
 Keep planner abstractions in `npc-engine-core`, shared helpers in `npc-engine-utils`, and scenario logic in `scenario-lumberjacks`. When referring to crates in code, use the current crate names `bioma_npc_core` and `bioma_npc_utils`.
 

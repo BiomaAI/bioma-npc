@@ -8,7 +8,7 @@ BiomaAI is using this codebase as the foundation for commercial agent systems, w
 
 * `bioma-npc-core`: the MCTS planner and core abstractions.
 * `bioma-npc-utils`: executors, helper types, graph tooling, and lightweight learning utilities.
-* `lumberjacks`: the upstream research scenario/demo packaged in `scenario-lumberjacks/`.
+* `lumberjacks`: the official Bevy-powered scenario/demo packaged in `scenario-lumberjacks/`.
 
 The current directory layout still uses the historical workspace folders `npc-engine-core/`, `npc-engine-utils/`, and `scenario-lumberjacks/`.
 
@@ -91,12 +91,12 @@ Source directory: [`npc-engine-core/examples/ecosystem`](npc-engine-core/example
 cargo run --release -p lumberjacks --bin lumberjacks -- scenario-lumberjacks/experiments/base.json
 ```
 
-The lumberjacks scenario remains bundled as the upstream research demo. In interactive mode, press `Enter` to advance turns.
+The lumberjacks scenario is the official Bevy-powered research demo. In interactive mode, hold `Enter` to advance the simulation.
 
 Useful headless smoke test:
 
 ```bash
-cargo run --release -p lumberjacks --bin lumberjacks -- --batch -s turns=10 scenario-lumberjacks/experiments/base.json
+cargo run --release -p lumberjacks --bin lumberjacks -- --batch -s turns=10 -s mcts.visits=100 --output /tmp/lumber-smoke scenario-lumberjacks/experiments/base.json
 ```
 
 Source directory: [`scenario-lumberjacks`](scenario-lumberjacks/)

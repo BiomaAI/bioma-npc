@@ -4,7 +4,6 @@ members = [
     "npc-engine-utils",
     "scenario-lumberjacks",
 ]
-exclude = ["scenario-lumberjacks-bevy"]
 resolver = "2"
 
 [profile.bench]

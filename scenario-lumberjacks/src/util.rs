@@ -1,16 +1,11 @@
-use std::collections::hash_map::DefaultHasher;
 use std::f32;
 use std::fmt;
-use std::hash::{Hash, Hasher};
 
 use bioma_npc_utils::Coord2D;
 use bioma_npc_utils::Direction;
 use bioma_npc_utils::DirectionConverterYDown;
-use ggez::graphics::Color;
 use num_traits::{AsPrimitive, PrimInt};
 use serde::Serialize;
-
-use bioma_npc_core::AgentId;
 
 pub const SPRITE_SIZE: f32 = 32.;
 
@@ -89,13 +84,6 @@ impl<T> Map2D<T> {
     {
         self.index(x, y).map(move |index| &mut self.tiles[index])
     }
-}
-
-pub fn agent_color(agent: AgentId) -> Color {
-    let mut hasher = DefaultHasher::default();
-    agent.0.hash(&mut hasher);
-    let bytes: [u8; 8] = hasher.finish().to_ne_bytes();
-    Color::from_rgb(bytes[5], bytes[6], bytes[7])
 }
 
 pub fn apply_direction(direction: Direction, x: isize, y: isize) -> (isize, isize) {

@@ -122,12 +122,12 @@ fn wavefront_pathfind(
         let (mut best_x, mut best_y) = (0, 0);
 
         let mut update_best = |x, y| {
-            if let Some(&cost) = gradient.get(x + radius - agent_x, y + radius - agent_y) {
-                if cost < best_cost {
-                    best_cost = cost;
-                    best_x = x;
-                    best_y = y;
-                }
+            if let Some(&cost) = gradient.get(x + radius - agent_x, y + radius - agent_y)
+                && cost < best_cost
+            {
+                best_cost = cost;
+                best_x = x;
+                best_y = y;
             }
         };
 
@@ -188,31 +188,31 @@ impl Behavior<Lumberjacks> for Lumberjack {
 
                     let wavefront = wavefront.as_mut().unwrap();
 
-                    if !(target_x == x && target_y == y) {
-                        if let Some(path) = wavefront_pathfind(
+                    if !(target_x == x && target_y == y)
+                        && let Some(path) = wavefront_pathfind(
                             wavefront,
                             (x as _, y as _),
                             (target_x as _, target_y as _),
-                        ) {
-                            let task = Move {
-                                path: path
-                                    .windows(2)
-                                    .map(|slice| {
-                                        let start = slice[0];
-                                        let end = slice[1];
-                                        from_direction(
-                                            (start.0 as _, start.1 as _),
-                                            (end.0 as _, end.1 as _),
-                                        )
-                                    })
-                                    .collect(),
-                                x: target_x as _,
-                                y: target_y as _,
-                            };
+                        )
+                    {
+                        let task = Move {
+                            path: path
+                                .windows(2)
+                                .map(|slice| {
+                                    let start = slice[0];
+                                    let end = slice[1];
+                                    from_direction(
+                                        (start.0 as _, start.1 as _),
+                                        (end.0 as _, end.1 as _),
+                                    )
+                                })
+                                .collect(),
+                            x: target_x as _,
+                            y: target_y as _,
+                        };
 
-                            if task.is_valid(ctx) {
-                                tasks.push(Box::new(task));
-                            }
+                        if task.is_valid(ctx) {
+                            tasks.push(Box::new(task));
                         }
                     }
                 });

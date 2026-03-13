@@ -6,13 +6,11 @@ use std::{char, num::NonZeroU8};
 use std::{fmt, io};
 
 use bioma_npc_core::AgentId;
-use ggez::glam::Vec2;
-use ggez::graphics::{Canvas, Color, DrawParam, Image};
 use image::{ColorType, GenericImageView};
 
 use serde::Serialize;
 
-use crate::{config, Action, SPRITE_SIZE};
+use crate::config;
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -74,45 +72,6 @@ impl TileMap {
             height,
             tiles,
         }
-    }
-
-    #[allow(clippy::needless_borrow)] // because clippy is buggy in its analysis here
-    pub fn draw(
-        &self,
-        canvas: &mut Canvas,
-        assets: &BTreeMap<String, Image>,
-        actions: &BTreeMap<AgentId, Action>,
-    ) {
-        self.tiles
-            .iter()
-            .enumerate()
-            .flat_map(|(row_id, row)| {
-                row.iter()
-                    .enumerate()
-                    .map(move |(col_id, tile)| (row_id, col_id, tile))
-            })
-            .for_each(|(row, col, tile)| {
-                let sprite = match tile {
-                    Tile::Agent(agent) if actions.contains_key(&agent) => Some(format!(
-                        "{}{}",
-                        if agent.0 % 2 == 0 { "Orange" } else { "Yellow" },
-                        actions.get(&agent).unwrap().sprite_name(),
-                    )),
-                    tile => tile.sprite(),
-                };
-
-                if let Some(sprite) = sprite {
-                    canvas.draw(
-                        assets.get(&sprite).unwrap(),
-                        DrawParam::default()
-                            .dest(Vec2::new(
-                                col as f32 * SPRITE_SIZE,
-                                row as f32 * SPRITE_SIZE,
-                            ))
-                            .color(Color::WHITE),
-                    );
-                }
-            });
     }
 
     pub fn tree_count(&self) -> usize {
@@ -187,21 +146,6 @@ pub enum Tile {
 }
 
 impl Tile {
-    fn sprite(&self) -> Option<String> {
-        match self {
-            Tile::Tree(height) => Some(format!("Tree{}_3", height.get().min(3))),
-            Tile::Agent(agent) => Some(if agent.0 % 2 == 0 {
-                "OrangeRight".to_owned()
-            } else {
-                "YellowRight".to_owned()
-            }),
-            Tile::Barrier => Some("WoodenBarrier".to_owned()),
-            Tile::Impassable => Some("ImpassableRock".to_owned()),
-            Tile::Well => Some("Well".to_owned()),
-            Tile::Empty => None,
-        }
-    }
-
     pub fn is_impassable(&self) -> bool {
         matches!(self, Tile::Impassable)
     }

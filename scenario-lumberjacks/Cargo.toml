@@ -1,35 +1,27 @@
 [package]
 name = "lumberjacks"
 version = "0.1.0"
-authors = ["Sven Knobloch <knsven@student.ethz.ch>", "Stéphane Magnenat <stephane.magnenat@inf.ethz.ch>"]
-edition = "2021"
+edition = "2024"
 license-file = "../LICENSE"
-description = "Lumberjacks scenario and research demo bundled with bioma-npc."
+description = "Bevy-powered lumberjacks scenario bundled with bioma-npc."
 repository = "https://github.com/BiomaAI/bioma-npc"
 homepage = "https://github.com/BiomaAI/bioma-npc"
 readme = "README.md"
-keywords = ["MCTS", "AI", "multi-agent", "simulation", "game"]
+keywords = ["MCTS", "AI", "multi-agent", "simulation", "bevy"]
 categories = ["algorithms", "science", "simulation", "game-development"]
-rust-version = "1.88"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+rust-version = "1.94"
 
 [dependencies]
-ggez = "~0.9"
-env_logger = "0.11.9"
-rand = "~0.10"
-palette = "~0.7"
-log = "~0.4"
-image = "~0.25"
-lazy_static = "^1.5"
-serde = { version = "^1", features = [ "derive" ] }
-serde_json = "^1"
+bevy = "0.18.1"
 clap = "^4"
-dot = "~0.1"
-rayon = "^1.11"
+image = "~0.25"
+log = "~0.4"
 num-traits = "*"
-
-bioma-npc-core = { version = "0.1", path = "../npc-engine-core", features = [ "graphviz" ] }
+rand = "~0.10"
+serde = { version = "^1", features = ["derive"] }
+serde_json = "^1"
+web-sys = "0.3.91"
+bioma-npc-core = { version = "0.1", path = "../npc-engine-core" }
 bioma-npc-utils = { version = "0.1", path = "../npc-engine-utils" }
 
 [lib]
@@ -37,7 +29,7 @@ path = "./src/lib.rs"
 
 [[bin]]
 name = "lumberjacks"
-path = "./src/bin/lumberjacks.rs"
+path = "./src/main.rs"
 
 [[bin]]
 name = "lumberjacks-experiment"
