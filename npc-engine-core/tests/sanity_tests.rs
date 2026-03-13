@@ -1,12 +1,7 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::fmt;
 use std::{collections::BTreeSet, hash::Hash};
 
-use npc_engine_core::{
+use bioma_npc_core::{
     impl_task_boxed_methods, AgentId, Behavior, Domain, MCTSConfiguration, StateDiffRef,
     StateDiffRefMut, Task, MCTS,
 };
@@ -24,7 +19,7 @@ fn init_logger() {
 }
 
 mod deferment {
-    use npc_engine_core::{AgentValue, Context, ContextMut, TaskDuration};
+    use bioma_npc_core::{AgentValue, Context, ContextMut, TaskDuration};
 
     use super::*;
 
@@ -200,7 +195,7 @@ mod deferment {
 }
 
 mod negative {
-    use npc_engine_core::{AgentValue, Context, ContextMut, TaskDuration};
+    use bioma_npc_core::{AgentValue, Context, ContextMut, TaskDuration};
 
     use super::*;
 

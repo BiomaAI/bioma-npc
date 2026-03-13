@@ -1,14 +1,9 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 // This file contains constants that can be tuned in order to adjust simulation.
 
 use std::time::Duration;
 
-use npc_engine_core::TaskDuration;
-use npc_engine_utils::Coord2D;
+use bioma_npc_core::TaskDuration;
+use bioma_npc_utils::Coord2D;
 
 // map generation
 pub const MAP_SIZE: Coord2D = Coord2D::new(40, 20);

@@ -1,13 +1,10 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
-//! This is the core of the NPC engine, containing the [MCTS] algorithm implementation and related abstractions.
+//! `bioma-npc-core` contains the planner and core abstractions used by `bioma-npc`.
 //!
-//! We provide several [examples](https://github.com/ethz-gtc/npc-engine/tree/main/npc-engine-core/examples)
-//! as introductions on how to use the planner.
-//! A good place to start is [tic-tac-toe](https://github.com/ethz-gtc/npc-engine/tree/main/npc-engine-core/examples/tic-tac-toe).
+//! We provide several examples in the repository's historical
+//! [`npc-engine-core/examples`](https://github.com/BiomaAI/bioma-npc/tree/main/npc-engine-core/examples)
+//! directory.
+//! A good place to start is
+//! [`tic-tac-toe`](https://github.com/BiomaAI/bioma-npc/tree/main/npc-engine-core/examples/tic-tac-toe).
 //!
 //! The core of the planner is the [MCTS] struct, which holds the state of the planner.
 //! It has two constructors, a simplified one, [new](MCTS::new), and a complete one, [new_with_tasks](MCTS::new_with_tasks).
@@ -24,9 +21,10 @@
 //!
 //! The `graphviz` feature enables to output the search tree in the Graphviz's dot format using the [plot_mcts_tree](graphviz::plot_mcts_tree) function.
 //!
-//! Additional features and utilites such as execution loops are available in the [`npc-engine-utils`](https://crates.io/crates/npc-engine-utils/) crate.
+//! Additional features and utilities such as execution loops are available in the
+//! `bioma-npc-utils` crate.
 //! You might want to use them in your project as they make the planner significantly simpler to use.
-//! Most [examples](https://github.com/ethz-gtc/npc-engine/tree/main/npc-engine-core/examples) use them.
+//! Most repository examples use them.
 
 mod active_task;
 mod behavior;

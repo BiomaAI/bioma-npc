@@ -1,16 +1,9 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::{collections::BTreeSet, fmt, hash::Hash};
 
-use npc_engine_core::{
+use bioma_npc_core::{
     impl_task_boxed_methods, AgentId, AgentValue, Behavior, Context, ContextMut, Domain,
     MCTSConfiguration, StateDiffRef, Task, TaskDuration, MCTS,
 };
-use rand::{thread_rng, RngCore};
-
 struct TestEngine;
 
 #[derive(Debug, Clone, Copy)]
@@ -101,7 +94,7 @@ fn seed() {
     env_logger::init();
     let agent = AgentId(0);
     for _ in 0..5 {
-        let seed = thread_rng().next_u64();
+        let seed: u64 = rand::random();
         let config = MCTSConfiguration {
             allow_invalid_tasks: false,
             visits: 1000,

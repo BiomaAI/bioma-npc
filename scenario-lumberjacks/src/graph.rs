@@ -1,11 +1,6 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::fs;
 
-use npc_engine_core::graphviz::plot_mcts_tree;
+use bioma_npc_core::graphviz::plot_mcts_tree;
 
 use crate::{output_path, PostMCTSHookArgs, PostMCTSHookFn};
 

@@ -1,11 +1,6 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::fmt;
 
-use npc_engine_core::{
+use bioma_npc_core::{
     impl_task_boxed_methods, Behavior, Context, ContextMut, IdleTask, Task, TaskDuration,
 };
 

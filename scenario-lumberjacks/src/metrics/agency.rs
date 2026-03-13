@@ -1,8 +1,3 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use crate::{PostMCTSHookArgs, PostMCTSHookFn};
 
 pub fn agency_metric_hook() -> PostMCTSHookFn {

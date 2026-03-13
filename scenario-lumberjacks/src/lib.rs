@@ -1,14 +1,9 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::mem::MaybeUninit;
 use std::path::PathBuf;
 use std::sync::Once;
 use std::{fs, io, mem, process};
 
-use clap::{App, Arg};
+use clap::{Arg, ArgAction, Command};
 
 use serde_json::Value;
 
@@ -54,92 +49,88 @@ static mut BATCH: MaybeUninit<bool> = MaybeUninit::uninit();
 
 unsafe fn init() {
     INIT.call_once(|| {
-        let matches = App::new("Lumberjacks")
+        let matches = Command::new("Lumberjacks")
             .version("1.0")
             .author("Sven Knobloch")
             .arg(
-                Arg::with_name("config")
+                Arg::new("config")
                     .required(true)
                     .help("Sets config file path"),
             )
             .arg(
-                Arg::with_name("working-dir")
+                Arg::new("working-dir")
                     .required(false)
-                    .takes_value(true)
+                    .num_args(1)
                     .value_name("directory")
                     .long("working-dir")
-                    .short("d")
+                    .short('d')
                     .help("Overrides working dir"),
             )
             .arg(
-                Arg::with_name("output")
+                Arg::new("output")
                     .required(false)
-                    .takes_value(true)
+                    .num_args(1)
                     .value_name("directory")
-                    .short("o")
+                    .short('o')
                     .long("output")
                     .help("Sets output directory"),
             )
             .arg(
-                Arg::with_name("name")
+                Arg::new("name")
                     .required(false)
-                    .takes_value(true)
+                    .num_args(1)
                     .value_name("name")
                     .default_value("Lumberjacks")
-                    .short("n")
+                    .short('n')
                     .long("name")
                     .help("Sets name"),
             )
             .arg(
-                Arg::with_name("batch")
+                Arg::new("batch")
                     .required(false)
-                    .takes_value(false)
-                    .short("b")
+                    .action(ArgAction::SetTrue)
+                    .short('b')
                     .long("batch")
                     .help("Enables batch mode"),
             )
             .arg(
-                Arg::with_name("set")
+                Arg::new("set")
                     .required(false)
-                    .takes_value(true)
-                    .multiple(true)
-                    .number_of_values(1)
-                    .short("s")
+                    .action(ArgAction::Append)
+                    .num_args(1)
+                    .short('s')
                     .long("set")
-                    .validator(|str| {
-                        if str.contains('=') {
-                            Ok(())
-                        } else {
-                            Err("Invalid format, should be \"some.path=value\"".to_owned())
-                        }
-                    })
                     .help("Manually override a value in the config"),
             )
             .get_matches();
 
-        let config_path = matches.value_of("config").unwrap();
+        let config_path = matches.get_one::<String>("config").unwrap();
         let config_dir = {
             let mut path = PathBuf::from(config_path);
             path.pop();
             path.to_str().unwrap().to_owned()
         };
 
-        NAME = MaybeUninit::new(matches.value_of("name").unwrap().to_owned());
+        NAME = MaybeUninit::new(matches.get_one::<String>("name").unwrap().to_owned());
 
-        OUTPUT_PATH =
-            MaybeUninit::new(matches.value_of("output").unwrap_or(&config_dir).to_owned());
-
-        WORKING_DIR = MaybeUninit::new(
+        OUTPUT_PATH = MaybeUninit::new(
             matches
-                .value_of("working-dir")
+                .get_one::<String>("output")
                 .unwrap_or(&config_dir)
                 .to_owned(),
         );
 
-        BATCH = MaybeUninit::new(matches.is_present("batch"));
+        WORKING_DIR = MaybeUninit::new(
+            matches
+                .get_one::<String>("working-dir")
+                .unwrap_or(&config_dir)
+                .to_owned(),
+        );
+
+        BATCH = MaybeUninit::new(matches.get_flag("batch"));
 
         CONFIG = MaybeUninit::new({
-            let mut json: Value = match config_path {
+            let mut json: Value = match config_path.as_str() {
                 "-" => {
                     let stdin = io::stdin();
                     serde_json::from_reader(stdin.lock()).unwrap()
@@ -156,11 +147,11 @@ unsafe fn init() {
                 }
             };
 
-            if let Some(values) = matches.values_of("set") {
+            if let Some(values) = matches.get_many::<String>("set") {
                 values.for_each(|value| {
-                    let split = value.split('=').collect::<Vec<_>>();
-                    let k = split[0];
-                    let v = split[1];
+                    let (k, v) = value
+                        .split_once('=')
+                        .unwrap_or_else(|| panic!("Invalid format, should be \"some.path=value\""));
 
                     let mut object = &mut json;
 
@@ -175,8 +166,7 @@ unsafe fn init() {
                                 .unwrap();
 
                             // Key is not present or an object
-                            if !map.contains_key(key) || map.get(key).unwrap().as_object().is_none()
-                            {
+                            if !matches!(map.get(key), Some(Value::Object(_))) {
                                 map.insert(key.to_owned(), Value::Object(Default::default()));
                             }
 

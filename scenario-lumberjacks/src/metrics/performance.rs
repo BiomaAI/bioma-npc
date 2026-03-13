@@ -1,15 +1,10 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::collections::HashMap;
 use std::mem;
 use std::time::Duration;
 
 use crate::{Barrier, Chop, Move, Plant, PostMCTSHookArgs, PostMCTSHookFn, Refill, Wait, Water};
-use npc_engine_core::AgentId;
-use npc_engine_utils::Direction;
+use bioma_npc_core::AgentId;
+use bioma_npc_utils::Direction;
 
 pub fn node_edges_count_metric_hook() -> PostMCTSHookFn {
     let mut stats = HashMap::<AgentId, (usize, usize, usize)>::default();

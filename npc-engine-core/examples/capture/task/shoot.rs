@@ -1,12 +1,7 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
-use npc_engine_core::{
+use bioma_npc_core::{
     impl_task_boxed_methods, AgentId, Context, ContextMut, IdleTask, Task, TaskDuration,
 };
-use npc_engine_utils::OptionDiffDomain;
+use bioma_npc_utils::OptionDiffDomain;
 
 use crate::domain::{CaptureDomain, DisplayAction};
 

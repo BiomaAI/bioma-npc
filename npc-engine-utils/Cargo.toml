@@ -1,25 +1,25 @@
 [package]
-name = "npc-engine-utils"
+name = "bioma-npc-utils"
 version = "0.1.0"
 authors = ["Sven Knobloch <knsven@student.ethz.ch>", "David Enderlin <daviden@student.ethz.ch>", "Stéphane Magnenat <stephane.magnenat@inf.ethz.ch>"]
 edition = "2021"
-license = "MIT OR Apache-2.0"
-description = "The utility module of the NPC engine, providing re-usable support code"
-repository = "https://github.com/ethz-gtc/npc-engine"
-homepage = "https://github.com/ethz-gtc/npc-engine"
+license-file = "../LICENSE"
+description = "Utility helpers for bioma-npc, a fork of npc-engine designed for agentic MMOs."
+repository = "https://github.com/BiomaAI/bioma-npc"
+homepage = "https://github.com/BiomaAI/bioma-npc"
 readme = "README.md"
 keywords = ["MCTS", "AI", "multi-agent", "simulation", "game"]
 categories = ["algorithms", "science", "simulation", "game-development"]
-rust-version = "1.62"
+rust-version = "1.88"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-npc-engine-core = { version = "0.1", path = "../npc-engine-core", features = ["graphviz"] }
+bioma-npc-core = { version = "0.1", path = "../npc-engine-core", features = ["graphviz"] }
 log = "0.4"
 ansi_term = "0.12"
-rand = "0.8"
+rand = "0.10"
 serde = { version = "1", features = [ "derive" ] }
 
 [dev-dependencies]
-env_logger = "0.9.0"
+env_logger = "0.11.9"

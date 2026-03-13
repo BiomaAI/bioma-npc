@@ -1,14 +1,9 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use npc_engine_core::{
+use bioma_npc_core::{
     AgentId, AgentValue, Behavior, Context, Domain, DomainWithPlanningTask, StateDiffRef,
 };
-use npc_engine_utils::{Coord2D, Direction, GlobalDomain};
+use bioma_npc_utils::{Coord2D, Direction, GlobalDomain};
 use num_traits::Zero;
 
 use crate::{

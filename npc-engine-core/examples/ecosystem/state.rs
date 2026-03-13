@@ -1,15 +1,10 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::{
     collections::{BTreeMap, HashMap},
     fmt::Display,
 };
 
-use npc_engine_core::{AgentId, StateDiffRef, StateDiffRefMut};
-use npc_engine_utils::{keep_second_mut, Coord2D};
+use bioma_npc_core::{AgentId, StateDiffRef, StateDiffRefMut};
+use bioma_npc_utils::{keep_second_mut, Coord2D};
 
 use crate::{
     constants::{

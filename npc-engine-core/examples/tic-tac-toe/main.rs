@@ -1,11 +1,6 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
+use bioma_npc_core::{graphviz, AgentId, MCTSConfiguration, MCTS};
+use bioma_npc_utils::plot_tree_in_tmp;
 use board::State;
-use npc_engine_core::{graphviz, AgentId, MCTSConfiguration, MCTS};
-use npc_engine_utils::plot_tree_in_tmp;
 use regex::Regex;
 
 use crate::{

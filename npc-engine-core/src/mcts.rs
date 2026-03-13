@@ -1,8 +1,3 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::collections::HashMap;
 use std::collections::{btree_map::Entry, BTreeMap, BTreeSet, HashSet};
 use std::f32;
@@ -10,11 +5,7 @@ use std::mem;
 use std::ops::Range;
 use std::time::{Duration, Instant};
 
-use rand::{
-    distributions::WeightedIndex,
-    prelude::{thread_rng, Distribution, RngCore, SeedableRng},
-    Rng,
-};
+use rand::{distr::weighted::WeightedIndex, prelude::*};
 use rand_chacha::ChaCha8Rng;
 
 use crate::*;
@@ -118,7 +109,7 @@ impl<D: Domain> MCTS<D> {
         nodes.insert(root.clone(), root_edges);
 
         // Compute seed
-        let cur_seed = config.seed.unwrap_or_else(|| thread_rng().next_u64());
+        let cur_seed = config.seed.unwrap_or_else(rand::random);
 
         MCTS {
             time: Duration::default(),
@@ -149,7 +140,7 @@ impl<D: Domain> MCTS<D> {
                     if tasks.is_empty() {
                         None
                     } else {
-                        let index = self.rng.gen_range(0..tasks.len());
+                        let index = self.rng.random_range(0..tasks.len());
                         Some(tasks[index].clone())
                     }
                 })
@@ -541,10 +532,13 @@ impl<D: Domain> MCTS<D> {
                     child_q_value *= discount_factor;
 
                     // Use Bellman Equation
-                    let q_value = child_current_value - parent_current_value + child_q_value;
+                    let q_value = AgentValue::new(
+                        (child_current_value - parent_current_value).into_inner() + child_q_value,
+                    )
+                    .expect("Q value unexpectedly became NaN");
 
                     // Update q value for edge
-                    *q_value_ref = *q_value;
+                    *q_value_ref = q_value.into_inner();
 
                     // Update global q value range for agent
                     let q_value_range = self
@@ -807,7 +801,7 @@ impl<D: Domain> StateValueEstimator<D> for DefaultPolicyEstimator {
                 // Update estimated value with discounted difference in current values
                 let new_current_value =
                     D::get_current_value(tick, new_ctx.state_diff, active_agent);
-                *estimated_value += *(new_current_value - *current_value) * discount;
+                *estimated_value += (new_current_value - *current_value).into_inner() * discount;
                 *current_value = new_current_value;
             }
 
@@ -895,16 +889,16 @@ pub mod graphviz {
     }
 
     fn agent_color_hsv(agent: AgentId) -> (f32, f32, f32) {
-        use palette::IntoColor;
+        use palette::{Hsv, IntoColor};
         let mut hasher = std::collections::hash_map::DefaultHasher::default();
         agent.0.hash(&mut hasher);
         let bytes: [u8; 8] = hasher.finish().to_ne_bytes();
-        let (h, s, v) = palette::Srgb::from_components((bytes[5], bytes[6], bytes[7]))
+        let hsv: Hsv = palette::Srgb::from_components((bytes[5], bytes[6], bytes[7]))
             .into_format::<f32>()
-            .into_hsv::<palette::encoding::Srgb>()
-            .into_components();
+            .into_color();
+        let (h, s, v) = hsv.into_components();
 
-        ((h.to_degrees() + 180.) / 360., s, v)
+        ((h.into_degrees() + 180.) / 360., s, v)
     }
 
     struct Edge<D: Domain> {

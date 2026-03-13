@@ -1,10 +1,5 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
-use npc_engine_core::{impl_task_boxed_methods, Context, ContextMut, Task, TaskDuration};
-use npc_engine_utils::OptionDiffDomain;
+use bioma_npc_core::{impl_task_boxed_methods, Context, ContextMut, Task, TaskDuration};
+use bioma_npc_utils::OptionDiffDomain;
 
 use crate::{
     constants::{RESPAWN_AMMO_DURATION, RESPAWN_MEDKIT_DURATION},

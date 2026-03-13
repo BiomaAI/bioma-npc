@@ -1,14 +1,9 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::fs;
 use std::path::PathBuf;
 use std::process;
 use std::process::{Command, Stdio};
 
-use clap::{App, Arg};
+use clap::{Arg, Command as ClapCommand};
 use serde_json::Value;
 
 use lumberjacks::Experiment;
@@ -34,41 +29,41 @@ fn override_config(value: &mut Value, mut _override: Value) {
 }
 
 fn main() {
-    let matches = App::new("Lumberjacks")
+    let matches = ClapCommand::new("Lumberjacks")
         .version("1.0")
         .author("Sven Knobloch")
         .arg(
-            Arg::with_name("bin")
+            Arg::new("bin")
                 .required(true)
                 .help("Path to lumberjacks binary"),
         )
         .arg(
-            Arg::with_name("config")
+            Arg::new("config")
                 .required(true)
                 .help("Sets config file path"),
         )
         .arg(
-            Arg::with_name("working-dir")
+            Arg::new("working-dir")
                 .required(false)
-                .takes_value(true)
+                .num_args(1)
                 .value_name("directory")
                 .long("working-dir")
-                .short("d")
+                .short('d')
                 .help("Overrides working dir"),
         )
         .arg(
-            Arg::with_name("output")
+            Arg::new("output")
                 .required(false)
-                .takes_value(true)
+                .num_args(1)
                 .value_name("directory")
-                .short("o")
+                .short('o')
                 .long("output")
                 .help("Sets output directory"),
         )
         .get_matches();
 
-    let binary = matches.value_of("bin").unwrap();
-    let experiment_file_path = matches.value_of("config").unwrap();
+    let binary = matches.get_one::<String>("bin").unwrap();
+    let experiment_file_path = matches.get_one::<String>("config").unwrap();
     let mut path = std::env::current_exe().unwrap();
     path.pop();
     path.push(binary);
@@ -79,7 +74,7 @@ fn main() {
         path.to_str().unwrap().to_owned()
     };
     let output = matches
-        .value_of("output")
+        .get_one::<String>("output")
         .unwrap_or(&experiment_dir)
         .to_owned();
 
@@ -127,7 +122,7 @@ fn main() {
     };
 
     let working_dir = matches
-        .value_of("working-dir")
+        .get_one::<String>("working-dir")
         .unwrap_or(&config_dir)
         .to_owned();
 

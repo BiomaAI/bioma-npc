@@ -1,8 +1,3 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 #[allow(unused_imports)]
 use std::collections::HashMap;
 use std::fs::File;
@@ -10,15 +5,15 @@ use std::io::prelude::*;
 use std::{collections::HashSet, iter, num::NonZeroU64};
 
 use behavior::world::WORLD_AGENT_ID;
-use constants::*;
-use domain::EcosystemDomain;
-use map::{GridAccess, Map, Tile};
-use npc_engine_core::{ActiveTask, ActiveTasks, AgentId, IdleTask, MCTSConfiguration, MCTS};
-use npc_engine_utils::{
+use bioma_npc_core::{ActiveTask, ActiveTasks, AgentId, IdleTask, MCTSConfiguration, MCTS};
+use bioma_npc_utils::{
     plot_tree_in_tmp_with_task_name, run_threaded_executor, Coord2D, ExecutorState,
     ExecutorStateGlobal,
 };
-use rand::Rng;
+use constants::*;
+use domain::EcosystemDomain;
+use map::{GridAccess, Map, Tile};
+use rand::RngExt;
 use state::{Agents, Diff, GlobalState, LocalState};
 use task::{eat_grass::EatGrass, eat_herbivore::EatHerbivore, world::WorldStep};
 
@@ -61,14 +56,14 @@ impl ExecutorStateGlobal<EcosystemDomain> for EcosystemExecutorState {
                     let pos = Coord2D::rand_uniform(MAP_SIZE);
                     *map.at_mut(pos).unwrap() = tile_factory();
                 }
-                let mut rng = rand::thread_rng();
+                let mut rng = rand::rng();
                 for _ in 0..hotspot_count {
-                    let x = rng.gen_range(2..MAP_SIZE.x - 2);
-                    let y = rng.gen_range(2..MAP_SIZE.y - 2);
+                    let x = rng.random_range(2..MAP_SIZE.x - 2);
+                    let y = rng.random_range(2..MAP_SIZE.y - 2);
                     let pos = Coord2D::new(x, y);
                     for _ in 0..10 {
-                        let x = rng.gen_range(pos.x - 2..=pos.x + 2);
-                        let y = rng.gen_range(pos.y - 2..=pos.y + 2);
+                        let x = rng.random_range(pos.x - 2..=pos.x + 2);
+                        let y = rng.random_range(pos.y - 2..=pos.y + 2);
                         let pos = Coord2D::new(x, y);
                         *map.at_mut(pos).unwrap() = tile_factory();
                     }
@@ -82,8 +77,8 @@ impl ExecutorStateGlobal<EcosystemDomain> for EcosystemExecutorState {
 
         // plants
         add_random_and_hotspots(PLANT_RANDOM_COUNT, PLANT_HOTSPOT_COUNT, &|| {
-            let mut rng = rand::thread_rng();
-            Tile::Grass(rng.gen_range(2..=3))
+            let mut rng = rand::rng();
+            Tile::Grass(rng.random_range(2..=3))
         });
 
         // helper for animals

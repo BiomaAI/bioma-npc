@@ -1,9 +1,4 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
-use npc_engine_core::{AgentId, Behavior, Context, Task};
+use bioma_npc_core::{AgentId, Behavior, Context, Task};
 
 use crate::{domain::CaptureDomain, task::world::WorldStep};
 

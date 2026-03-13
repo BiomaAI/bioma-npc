@@ -1,11 +1,6 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::collections::HashMap;
 
-use npc_engine_core::TaskDuration;
+use bioma_npc_core::TaskDuration;
 
 use crate::map::{Location, Map};
 

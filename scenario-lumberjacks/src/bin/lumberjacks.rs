@@ -1,17 +1,10 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::{env, f32, fs};
 
 use ggez::conf::{WindowMode, WindowSetup};
 use ggez::graphics::Image;
 use ggez::ContextBuilder;
-use image::{png::PngDecoder, ImageDecoder};
 
-use npc_engine_core::graphviz::set_graph_output_depth;
-use rand::{thread_rng, RngCore};
+use bioma_npc_core::graphviz::set_graph_output_depth;
 use rayon::prelude::*;
 
 use lumberjacks::{batch, config, name, output_path, GameState, SPRITE_SIZE};
@@ -135,10 +128,7 @@ fn main() {
     set_graph_output_depth(config().analytics.graphs_depth);
     if batch() {
         (0..config().batch.runs).into_par_iter().for_each(|run| {
-            let seed = config()
-                .mcts
-                .seed
-                .unwrap_or_else(|| thread_rng().next_u64());
+            let seed = config().mcts.seed.unwrap_or_else(rand::random);
             let mut state = GameState::new(config().display.interactive, Some(run), seed);
 
             let turns = config()
@@ -152,15 +142,12 @@ fn main() {
             state.dump_result();
         });
     } else {
-        let seed = config()
-            .mcts
-            .seed
-            .unwrap_or_else(|| thread_rng().next_u64());
+        let seed = config().mcts.seed.unwrap_or_else(rand::random);
         let mut state = GameState::new(config().display.interactive, None, seed);
         state.dump_run();
 
         // Create game context
-        let (mut ctx, mut events) = ContextBuilder::new("lumberjacks", "Sven Knobloch")
+        let (mut ctx, events) = ContextBuilder::new("lumberjacks", "Sven Knobloch")
             .window_setup(WindowSetup {
                 title: name().clone(),
                 vsync: true,
@@ -175,17 +162,7 @@ fn main() {
 
         // Load assets
         for (name, bytes) in ASSETS {
-            let png = PngDecoder::new(<&[u8]>::clone(bytes)).unwrap();
-            let (width, height) = png.dimensions();
-
-            let mut rgba = vec![0u8; png.total_bytes() as _];
-
-            png.read_image(&mut rgba).unwrap();
-
-            state.add_asset(
-                (*name).to_owned(),
-                Image::from_rgba8(&mut ctx, width as _, height as _, &rgba).unwrap(),
-            );
+            state.add_asset((*name).to_owned(), Image::from_bytes(&ctx, bytes).unwrap());
         }
 
         // Screenshot of initial state
@@ -193,11 +170,6 @@ fn main() {
         state.screenshot(&mut ctx, &format!("{}/start.png", dir));
 
         // Run game
-        ggez::event::run(&mut ctx, &mut events, &mut state).unwrap();
-
-        // Screenshot of final state
-        state.screenshot(&mut ctx, &format!("{}/result.png", dir));
-
-        state.dump_result();
+        ggez::event::run(ctx, events, state);
     }
 }

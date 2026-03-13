@@ -1,11 +1,6 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::fmt;
 
-use npc_engine_core::{Behavior, Context};
+use bioma_npc_core::{Behavior, Context};
 
 use crate::Lumberjacks;
 
@@ -25,7 +20,7 @@ impl Behavior<Lumberjacks> for Human {
     fn add_own_tasks(
         &self,
         _ctx: Context<Lumberjacks>,
-        _tasks: &mut Vec<Box<dyn npc_engine_core::Task<Lumberjacks>>>,
+        _tasks: &mut Vec<Box<dyn bioma_npc_core::Task<Lumberjacks>>>,
     ) {
     }
 }

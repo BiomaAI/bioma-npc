@@ -1,21 +1,16 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::collections::hash_map::DefaultHasher;
 use std::f32;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 
+use bioma_npc_utils::Coord2D;
+use bioma_npc_utils::Direction;
+use bioma_npc_utils::DirectionConverterYDown;
 use ggez::graphics::Color;
-use npc_engine_utils::Coord2D;
-use npc_engine_utils::Direction;
-use npc_engine_utils::DirectionConverterYDown;
 use num_traits::{AsPrimitive, PrimInt};
 use serde::Serialize;
 
-use npc_engine_core::AgentId;
+use bioma_npc_core::AgentId;
 
 pub const SPRITE_SIZE: f32 = 32.;
 

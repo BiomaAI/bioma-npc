@@ -1,12 +1,7 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::{collections::BTreeSet, fmt};
 
-use npc_engine_core::{AgentId, AgentValue, Behavior, Context, Domain, StateDiffRef};
-use npc_engine_utils::OptionDiffDomain;
+use bioma_npc_core::{AgentId, AgentValue, Behavior, Context, Domain, StateDiffRef};
+use bioma_npc_utils::OptionDiffDomain;
 use num_traits::Zero;
 
 use crate::{

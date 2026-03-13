@@ -1,15 +1,10 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::collections::{BTreeMap, BTreeSet};
 
+use bioma_npc_core::{AgentId, StateDiffRef, StateDiffRefMut};
+use bioma_npc_utils::DIRECTIONS;
 use ggez::graphics;
 use ggez::graphics::Image;
-use ggez::Context;
-use npc_engine_core::{AgentId, StateDiffRef, StateDiffRefMut};
-use npc_engine_utils::DIRECTIONS;
+use ggez::{graphics::Canvas, Context};
 use serde::Serialize;
 
 use crate::{
@@ -26,33 +21,33 @@ pub struct WorldGlobalState {
 }
 
 impl WorldGlobalState {
-    pub fn draw(&self, ctx: &mut Context, assets: &BTreeMap<String, Image>) {
-        let screen = graphics::screen_coordinates(ctx);
+    pub fn draw(&self, ctx: &Context, canvas: &mut Canvas, assets: &BTreeMap<String, Image>) {
+        let screen = canvas
+            .screen_coordinates()
+            .expect("canvas missing screen coordinates");
 
         if config().display.inventory {
-            self.inventory.draw(ctx, assets);
+            self.inventory.draw(ctx, canvas, assets);
         }
-        self.with_map_coordinates(ctx, |ctx| {
-            self.map.draw(ctx, assets, &self.actions);
+        self.with_map_coordinates(canvas, |canvas| {
+            self.map.draw(canvas, assets, &self.actions);
         });
-        graphics::set_screen_coordinates(ctx, screen).unwrap();
+        canvas.set_screen_coordinates(screen);
     }
 
     // Draw to non-padding area
-    pub fn with_map_coordinates(&self, ctx: &mut Context, f: impl Fn(&mut Context)) {
-        let screen = graphics::screen_coordinates(ctx);
-        graphics::set_screen_coordinates(
-            ctx,
-            graphics::Rect {
-                x: screen.x - config().display.padding.0 as f32 * SPRITE_SIZE,
-                y: screen.y - config().display.padding.1 as f32 * SPRITE_SIZE,
-                w: screen.w,
-                h: screen.h,
-            },
-        )
-        .unwrap();
-        f(ctx);
-        graphics::set_screen_coordinates(ctx, screen).unwrap();
+    pub fn with_map_coordinates(&self, canvas: &mut Canvas, f: impl FnOnce(&mut Canvas)) {
+        let screen = canvas
+            .screen_coordinates()
+            .expect("canvas missing screen coordinates");
+        canvas.set_screen_coordinates(graphics::Rect {
+            x: screen.x - config().display.padding.0 as f32 * SPRITE_SIZE,
+            y: screen.y - config().display.padding.1 as f32 * SPRITE_SIZE,
+            w: screen.w,
+            h: screen.h,
+        });
+        f(canvas);
+        canvas.set_screen_coordinates(screen);
     }
 
     pub fn find_agent(&self, agent: AgentId) -> Option<(isize, isize)> {

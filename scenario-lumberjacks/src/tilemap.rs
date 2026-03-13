@@ -1,8 +1,3 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::{Hash, Hasher};
@@ -10,11 +5,10 @@ use std::mem;
 use std::{char, num::NonZeroU8};
 use std::{fmt, io};
 
-use ggez::graphics::{draw, Image, WHITE};
-use ggez::Context;
-use image::png::PngDecoder;
-use image::{ColorType, ImageDecoder};
-use npc_engine_core::AgentId;
+use bioma_npc_core::AgentId;
+use ggez::glam::Vec2;
+use ggez::graphics::{Canvas, Color, DrawParam, Image};
+use image::{ColorType, GenericImageView};
 
 use serde::Serialize;
 
@@ -36,15 +30,17 @@ impl fmt::Debug for TileMap {
 
 impl TileMap {
     pub fn from_io(agents: &mut Vec<AgentId>, read: impl io::Read) -> Self {
-        let decoder = PngDecoder::new(read).expect("failed to parse value as png");
-        let (width, height) = decoder.dimensions();
+        let mut encoded = Vec::new();
+        let mut read = read;
+        io::Read::read_to_end(&mut read, &mut encoded).expect("failed to read png");
+        let image = image::load_from_memory(&encoded).expect("failed to parse value as png");
+        let (width, height) = image.dimensions();
         let width = width as usize;
         let height = height as usize;
 
-        let tiles = match decoder.color_type() {
+        let tiles = match image.color() {
             ColorType::Rgba8 => {
-                let mut data = vec![0; decoder.total_bytes() as _];
-                decoder.read_image(&mut data).expect("failed to read image");
+                let data = image.to_rgba8();
 
                 data.chunks_exact(width * 4)
                     .map(|row| {
@@ -83,7 +79,7 @@ impl TileMap {
     #[allow(clippy::needless_borrow)] // because clippy is buggy in its analysis here
     pub fn draw(
         &self,
-        ctx: &mut Context,
+        canvas: &mut Canvas,
         assets: &BTreeMap<String, Image>,
         actions: &BTreeMap<AgentId, Action>,
     ) {
@@ -106,12 +102,15 @@ impl TileMap {
                 };
 
                 if let Some(sprite) = sprite {
-                    draw(
-                        ctx,
+                    canvas.draw(
                         assets.get(&sprite).unwrap(),
-                        ([col as f32 * SPRITE_SIZE, row as f32 * SPRITE_SIZE], WHITE),
-                    )
-                    .unwrap();
+                        DrawParam::default()
+                            .dest(Vec2::new(
+                                col as f32 * SPRITE_SIZE,
+                                row as f32 * SPRITE_SIZE,
+                            ))
+                            .color(Color::WHITE),
+                    );
                 }
             });
     }

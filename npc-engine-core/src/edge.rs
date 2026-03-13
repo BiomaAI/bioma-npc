@@ -1,8 +1,3 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::{
     collections::BTreeSet,
     fmt, mem,
@@ -12,7 +7,7 @@ use std::{
 
 use crate::{AgentId, AgentValue, Context, Domain, Node, SeededHashMap, Task, WeakNode};
 
-use rand::distributions::WeightedIndex;
+use rand::distr::weighted::WeightedIndex;
 
 /// The tasks left to expand in a given node.
 ///
@@ -231,8 +226,8 @@ impl<D: Domain> EdgeInner<D> {
         // If parent is not present, this node is being reused and the parent leaves the horizon. Score doesn't matter
         if let Some(q_value) = self.q_values.get(&parent_agent) {
             // Normalize the exploitation factor so it doesn't overshadow the exploration
-            let exploitation_value =
-                (q_value - *range.start) / (*(range.end - range.start)).max(f32::EPSILON);
+            let exploitation_value = (q_value - range.start.into_inner())
+                / (range.end - range.start).into_inner().max(f32::EPSILON);
             let exploration_value =
                 ((parent_child_visits as f32).ln() / (self.visits as f32).max(f32::EPSILON)).sqrt();
             exploitation_value + exploration * exploration_value

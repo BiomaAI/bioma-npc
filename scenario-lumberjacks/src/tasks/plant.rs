@@ -1,15 +1,10 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::hash::Hash;
 use std::num::NonZeroU8;
 
-use npc_engine_core::{
+use bioma_npc_core::{
     impl_task_boxed_methods, Context, ContextMut, Domain, IdleTask, Task, TaskDuration,
 };
-use npc_engine_utils::Direction;
+use bioma_npc_utils::Direction;
 
 use crate::{apply_direction, config, Action, Lumberjacks, Tile, WorldState, WorldStateMut};
 

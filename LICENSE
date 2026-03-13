@@ -1,0 +1,17 @@
+Copyright (c) 2026 BiomaAI
+
+All rights reserved.
+
+This repository contains BiomaAI modifications and original work distributed by
+BiomaAI for commercial and internal use. No right to use, copy, modify, merge,
+publish, distribute, sublicense, or sell BiomaAI-owned portions of this
+repository is granted except by separate written agreement with BiomaAI.
+
+This repository also includes code and materials derived from npc-engine:
+https://github.com/ethz-gtc/npc-engine
+
+Preserved upstream MIT licensing information for inherited code is provided in
+LICENSE-MIT. Additional provenance information is provided in PROVENANCE.md.
+
+Any use of inherited upstream portions must remain compliant with the preserved
+upstream notice.

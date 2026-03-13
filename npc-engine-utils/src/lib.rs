@@ -1,9 +1,4 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
-//! This is the utility module of the [NPC engine](https://crates.io/crates/npc-engine-core/), containing helpful utility code.
+//! `bioma-npc-utils` contains helper code for the `bioma-npc` workspace.
 //!
 //! It contains the following features:
 //! - A helper trait [OptionDiffDomain] that can be used when [Diffs](Domain::Diff) are just copies of the [State](Domain::State).
@@ -14,7 +9,7 @@
 //! - Helper functions to simplify functional programming with tuples: [keep_first] and [keep_second], and their mutable versions [keep_first_mut] and [keep_second_mut].
 
 #[cfg(doc)]
-use npc_engine_core::Domain;
+use bioma_npc_core::Domain;
 
 mod coord2d;
 mod direction;

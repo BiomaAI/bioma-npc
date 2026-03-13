@@ -1,9 +1,4 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
-use npc_engine_core::{AgentId, Domain};
+use bioma_npc_core::{AgentId, Domain};
 
 /// A domain that provides a global state, out of which a local state for the planning can be derived.
 pub trait GlobalDomain: Domain {

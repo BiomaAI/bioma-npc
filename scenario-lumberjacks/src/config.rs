@@ -1,18 +1,13 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::fmt;
 use std::{collections::HashMap, num::NonZeroU8};
 
-use npc_engine_core::graphviz::get_graph_output_depth;
+use bioma_npc_core::graphviz::get_graph_output_depth;
 use serde::de::{MapAccess, Visitor};
 use serde::ser::SerializeMap;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
 
-use npc_engine_core::{AgentId, StateDiffRef};
+use bioma_npc_core::{AgentId, StateDiffRef};
 
 use crate::fitnesses;
 use crate::Lumberjacks;

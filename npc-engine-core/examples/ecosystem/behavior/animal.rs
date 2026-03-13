@@ -1,10 +1,5 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
-use npc_engine_core::{Behavior, Context, IdleTask, Task};
-use npc_engine_utils::DIRECTIONS;
+use bioma_npc_core::{Behavior, Context, IdleTask, Task};
+use bioma_npc_utils::DIRECTIONS;
 
 use crate::{domain::EcosystemDomain, state::Access, task::r#move::Move};
 

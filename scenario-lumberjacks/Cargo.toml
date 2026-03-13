@@ -3,35 +3,34 @@ name = "lumberjacks"
 version = "0.1.0"
 authors = ["Sven Knobloch <knsven@student.ethz.ch>", "Stéphane Magnenat <stephane.magnenat@inf.ethz.ch>"]
 edition = "2021"
-license = "MIT OR Apache-2.0"
-description = "The lumberjack experiment from the ETH-GTC AIIDE 2020 INT paper"
-repository = "https://github.com/ethz-gtc/npc-engine"
-homepage = "https://github.com/ethz-gtc/npc-engine"
+license-file = "../LICENSE"
+description = "Lumberjacks scenario and research demo bundled with bioma-npc."
+repository = "https://github.com/BiomaAI/bioma-npc"
+homepage = "https://github.com/BiomaAI/bioma-npc"
 readme = "README.md"
 keywords = ["MCTS", "AI", "multi-agent", "simulation", "game"]
 categories = ["algorithms", "science", "simulation", "game-development"]
-rust-version = "1.62"
+rust-version = "1.88"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ggez = "~0.5"
-env_logger = "0.9.0"
-rand = "~0.7"
-palette = "~0.5"
+ggez = "~0.9"
+env_logger = "0.11.9"
+rand = "~0.10"
+palette = "~0.7"
 log = "~0.4"
-image = "~0.23"
-lazy_static = "^1.4"
+image = "~0.25"
+lazy_static = "^1.5"
 serde = { version = "^1", features = [ "derive" ] }
 serde_json = "^1"
-clap = "^2"
+clap = "^4"
 dot = "~0.1"
-partitions = "~0.2"
-rayon = "^1.3"
+rayon = "^1.11"
 num-traits = "*"
 
-npc-engine-core = { version = "0.1", path = "../npc-engine-core", features = [ "graphviz" ] }
-npc-engine-utils = { version = "0.1", path = "../npc-engine-utils" }
+bioma-npc-core = { version = "0.1", path = "../npc-engine-core", features = [ "graphviz" ] }
+bioma-npc-utils = { version = "0.1", path = "../npc-engine-utils" }
 
 [lib]
 path = "./src/lib.rs"

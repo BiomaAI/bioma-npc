@@ -1,12 +1,7 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::collections::BTreeMap;
 
-use npc_engine_core::{AgentId, MCTSConfiguration, StateDiffRef, StateValueEstimator};
-use npc_engine_utils::{NeuralNetwork, Neuron, OptionDiffDomain};
+use bioma_npc_core::{AgentId, MCTSConfiguration, StateDiffRef, StateValueEstimator};
+use bioma_npc_utils::{NeuralNetwork, Neuron, OptionDiffDomain};
 
 use crate::{domain::LearnDomain, state::State};
 
@@ -30,8 +25,8 @@ impl StateValueEstimator<LearnDomain> for NNStateValueEstimator {
         _config: &MCTSConfiguration,
         initial_state: &State,
         _start_tick: u64,
-        node: &npc_engine_core::Node<LearnDomain>,
-        _edges: &npc_engine_core::Edges<LearnDomain>,
+        node: &bioma_npc_core::Node<LearnDomain>,
+        _edges: &bioma_npc_core::Edges<LearnDomain>,
         _depth: u32,
     ) -> Option<BTreeMap<AgentId, f32>> {
         let state = LearnDomain::get_cur_state(StateDiffRef::new(initial_state, node.diff()));

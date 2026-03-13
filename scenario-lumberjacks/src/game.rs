@@ -1,23 +1,18 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::collections::BTreeMap;
 
 use std::fs;
 use std::process;
 
-use ggez::event;
+use bioma_npc_core::ContextMut;
+use bioma_npc_core::MCTSConfiguration;
+use bioma_npc_core::{AgentId, Task, MCTS};
+use bioma_npc_utils::GlobalDomain;
 use ggez::event::EventHandler;
-use ggez::graphics::{Image, Text};
+use ggez::glam::Vec2;
+use ggez::graphics::Canvas;
+use ggez::graphics::{Color, DrawParam, Image, Text};
 use ggez::input::keyboard::KeyCode;
-use ggez::{graphics, input::keyboard};
 use ggez::{Context, GameResult};
-use npc_engine_core::ContextMut;
-use npc_engine_core::MCTSConfiguration;
-use npc_engine_core::{AgentId, Task, MCTS};
-use npc_engine_utils::GlobalDomain;
 
 use crate::WorldDiff;
 use crate::{
@@ -47,6 +42,7 @@ pub struct GameState {
     post_world_hooks: PostWorldHooks,
     post_mcts_hooks: PostMCTSHooks,
     assets: BTreeMap<String, Image>,
+    finalized: bool,
 }
 
 impl GameState {
@@ -114,6 +110,7 @@ impl GameState {
             post_world_hooks: Default::default(),
             post_mcts_hooks: Default::default(),
             assets: Default::default(),
+            finalized: false,
         };
 
         state.register_hooks();
@@ -230,6 +227,20 @@ impl GameState {
         self.assets.insert(name, image);
     }
 
+    fn finalize(&mut self, ctx: Option<&mut Context>) {
+        if self.finalized {
+            return;
+        }
+
+        if let Some(ctx) = ctx {
+            let dir = self.output_dir();
+            self.screenshot(ctx, &format!("{}/result.png", dir));
+        }
+
+        self.dump_result();
+        self.finalized = true;
+    }
+
     pub fn width(&self) -> usize {
         self.world.map.width
     }
@@ -316,13 +327,14 @@ impl EventHandler for GameState {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         match config().turns {
             Some(turns) if self.turn >= turns => {
-                event::quit(ctx);
+                self.finalize(Some(ctx));
+                ctx.request_quit();
                 return Ok(());
             }
             _ => (),
         }
 
-        if keyboard::is_key_pressed(ctx, KeyCode::Return) || !self.interactive {
+        if ctx.keyboard.is_key_pressed(KeyCode::Return) || !self.interactive {
             GameState::update(self, Some(ctx));
         }
 
@@ -332,24 +344,29 @@ impl EventHandler for GameState {
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         let world = &self.world;
 
-        graphics::clear(
+        let mut canvas = Canvas::from_frame(
             ctx,
-            graphics::Color::new(
+            Color::new(
                 config().display.background.0,
                 config().display.background.1,
                 config().display.background.2,
-                1.,
+                1.0,
             ),
         );
 
-        graphics::draw(
-            ctx,
+        canvas.draw(
             &Text::new(format!("Turn: {}", self.turn)),
-            ([5.0 * SPRITE_SIZE, 0.0 * SPRITE_SIZE], graphics::WHITE),
-        )
-        .unwrap();
-        world.draw(ctx, &self.assets);
+            DrawParam::default()
+                .dest(Vec2::new(5.0 * SPRITE_SIZE, 0.0))
+                .color(Color::WHITE),
+        );
+        world.draw(ctx, &mut canvas, &self.assets);
 
-        graphics::present(ctx)
+        canvas.finish(ctx)
+    }
+
+    fn quit_event(&mut self, ctx: &mut Context) -> GameResult<bool> {
+        self.finalize(Some(ctx));
+        Ok(false)
     }
 }

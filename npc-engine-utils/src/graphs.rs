@@ -1,9 +1,4 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
-use npc_engine_core::{debug_name_to_filename_safe, graphviz, ActiveTask, Domain, MCTS};
+use bioma_npc_core::{debug_name_to_filename_safe, graphviz, ActiveTask, Domain, MCTS};
 use std::fs;
 
 /// Plots the MCTS tree using graphviz's dot format.

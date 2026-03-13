@@ -1,8 +1,3 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 /// Returns a reference to the first element of a tuple reference.
 pub fn keep_first<A, B>(tuple: &(A, B)) -> &A {
     &tuple.0

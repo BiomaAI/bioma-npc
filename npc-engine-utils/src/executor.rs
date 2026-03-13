@@ -1,10 +1,5 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use ansi_term::Style;
-use npc_engine_core::{
+use bioma_npc_core::{
     ActiveTask, ActiveTasks, AgentId, Context, ContextMut, DefaultPolicyEstimator, Domain,
     DomainWithPlanningTask, EarlyStopCondition, IdleTask, MCTSConfiguration, PlanningTask,
     StateDiffRef, StateValueEstimator, Task, MCTS,
@@ -59,7 +54,7 @@ impl<
 /// If you have no special need, you can just implement this trait on an empty struct:
 /// ```
 /// # struct MyDomain;
-/// # use npc_engine_core::{Domain, Behavior, StateDiffRef, AgentId, AgentValue, Context};
+/// # use bioma_npc_core::{Domain, Behavior, StateDiffRef, AgentId, AgentValue, Context};
 /// # use std::collections::BTreeSet;
 /// # impl Domain for MyDomain {
 /// #     type State = ();
@@ -69,7 +64,7 @@ impl<
 /// #     fn get_current_value(_tick: u64, _state_diff: StateDiffRef<Self>, _agent: AgentId) -> AgentValue { AgentValue::new(0.).unwrap() }
 /// #     fn update_visible_agents(_start_tick: u64, _ctx: Context<Self>, agents: &mut BTreeSet<AgentId>) {}
 /// # }
-/// # use npc_engine_utils::ExecutorState;
+/// # use bioma_npc_utils::ExecutorState;
 /// struct MyExecutorState;
 /// impl ExecutorState<MyDomain> for MyExecutorState {}
 /// ```
@@ -660,11 +655,11 @@ pub fn run_threaded_executor<D, S>(
 mod tests {
     use super::*;
     use crate::*;
-    use core::time;
-    use npc_engine_core::{
+    use bioma_npc_core::{
         ActiveTask, ActiveTasks, AgentId, AgentValue, Behavior, Domain, IdleTask,
         MCTSConfiguration, StateDiffRef, Task,
     };
+    use core::time;
     use std::{collections::BTreeSet, num::NonZeroU64, thread};
 
     #[test]

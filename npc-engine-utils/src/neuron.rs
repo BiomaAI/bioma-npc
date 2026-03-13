@@ -1,11 +1,6 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::iter::zip;
 
-use rand::Rng;
+use rand::RngExt;
 
 const RELU_LEAK: f32 = 0.01;
 
@@ -27,26 +22,26 @@ impl<const I: usize> Neuron<I> {
     }
     /// Creates a new neuron with random weights within [-1, 1] and bias to 0.
     pub fn random_with_0_bias() -> Self {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         Self {
-            weights: [0.; I].map(|_| rng.gen_range(-1.0..=1.0)),
+            weights: [0.; I].map(|_| rng.random_range(-1.0..=1.0)),
             bias: 0.0,
         }
     }
     /// Creates a new neuron with random weights and bias within [-1, 1].
     pub fn random() -> Self {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         Self {
-            weights: [0.; I].map(|_| rng.gen_range(-1.0..=1.0)),
-            bias: rng.gen_range(-1.0..=1.0),
+            weights: [0.; I].map(|_| rng.random_range(-1.0..=1.0)),
+            bias: rng.random_range(-1.0..=1.0),
         }
     }
     /// Creates a new neuron with random weights and bias within [-range, range].
     pub fn random_with_range(range: f32) -> Self {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         Self {
-            weights: [0.; I].map(|_| rng.gen_range(-range..=range)),
-            bias: rng.gen_range(-range..=range),
+            weights: [0.; I].map(|_| rng.random_range(-range..=range)),
+            bias: rng.random_range(-range..=range),
         }
     }
     fn leaky_relu(x: f32) -> f32 {
@@ -197,7 +192,7 @@ impl<const I: usize, const H: usize> NeuralNetwork<I, H> {
 
 #[cfg(test)]
 mod tests {
-    use rand::Rng;
+    use rand::RngExt;
 
     use crate::NeuralNetwork;
 
@@ -330,10 +325,10 @@ mod tests {
             ],
             output_layer: Neuron::random(),
         };
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let test_set = (0..100)
             .map(|_| {
-                let x = rng.gen_range(-2.0..2.0);
+                let x = rng.random_range(-2.0..2.0);
                 (x, f(x))
             })
             .collect::<Vec<_>>();
@@ -344,7 +339,7 @@ mod tests {
                 // generate new data and train
                 let data = (0..4)
                     .map(|_| {
-                        let x = rng.gen_range(-2.0..2.0);
+                        let x = rng.random_range(-2.0..2.0);
                         ([x], f(x))
                     })
                     .collect::<Vec<_>>();

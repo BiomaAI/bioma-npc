@@ -1,20 +1,15 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::{collections::BTreeMap, iter};
 
 use behavior::world::WORLD_AGENT_ID;
+use bioma_npc_core::{
+    graphviz, ActiveTask, ActiveTasks, AgentId, IdleTask, MCTSConfiguration, MCTS,
+};
+use bioma_npc_utils::{
+    plot_tree_in_tmp_with_task_name, run_simple_executor, ExecutorState, ExecutorStateLocal,
+};
 use constants::MAX_HP;
 use domain::CaptureDomain;
 use map::Location;
-use npc_engine_core::{
-    graphviz, ActiveTask, ActiveTasks, AgentId, IdleTask, MCTSConfiguration, MCTS,
-};
-use npc_engine_utils::{
-    plot_tree_in_tmp_with_task_name, run_simple_executor, ExecutorState, ExecutorStateLocal,
-};
 use state::{AgentState, CapturePointState, State};
 use task::world::WorldStep;
 

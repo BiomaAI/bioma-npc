@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
 
-"""
- SPDX-License-Identifier: Apache-2.0 OR MIT
- © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
-"""
-
 import sys
 import os
 import numpy as np
@@ -12,7 +7,7 @@ import scipy.ndimage as ndimage
 import matplotlib.pyplot as plt
 
 print('Compiling')
-os.system('cargo build --release --example learn')
+os.system('cargo build --release -p bioma-npc-core --example learn')
 Xs = []
 for run in range(20):
 	print(f'Running simulation {run}')

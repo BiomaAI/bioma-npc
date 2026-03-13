@@ -1,16 +1,12 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::collections::BTreeMap;
 use std::mem;
 
-use ggez::graphics::{draw, Image, Text, DEFAULT_FONT_SCALE, WHITE};
+use ggez::glam::Vec2;
+use ggez::graphics::{Canvas, Color, DrawParam, Image, Text};
 use ggez::Context;
 use serde::Serialize;
 
-use npc_engine_core::AgentId;
+use bioma_npc_core::AgentId;
 
 use crate::SPRITE_SIZE;
 
@@ -24,7 +20,7 @@ pub struct AgentInventory {
 }
 
 impl Inventory {
-    pub fn draw(&self, ctx: &mut Context, assets: &BTreeMap<String, Image>) {
+    pub fn draw(&self, ctx: &Context, canvas: &mut Canvas, assets: &BTreeMap<String, Image>) {
         let mut agents = self
             .0
             .iter()
@@ -40,22 +36,23 @@ impl Inventory {
                 "YellowRight".to_owned()
             };
 
-            draw(
-                ctx,
+            canvas.draw(
                 assets.get(&sprite_name).unwrap(),
-                ([0 as f32 * SPRITE_SIZE, i as f32 * SPRITE_SIZE], WHITE),
-            )
-            .unwrap();
+                DrawParam::default()
+                    .dest(Vec2::new(0.0, i as f32 * SPRITE_SIZE))
+                    .color(Color::WHITE),
+            );
 
-            draw(
-                ctx,
-                &Text::new(format!(":{}, {}", wood, water)),
-                ([
+            let mut text = Text::new(format!(":{}, {}", wood, water));
+            text.set_scale(SPRITE_SIZE * 0.6);
+            let text_height = text.measure(ctx).unwrap().y;
+            canvas.draw(
+                &text,
+                DrawParam::default().dest(Vec2::new(
                     SPRITE_SIZE,
-                    i as f32 * SPRITE_SIZE + (SPRITE_SIZE - DEFAULT_FONT_SCALE) / 2.,
-                ],),
-            )
-            .unwrap();
+                    i as f32 * SPRITE_SIZE + (SPRITE_SIZE - text_height) / 2.,
+                )),
+            );
         }
     }
 }

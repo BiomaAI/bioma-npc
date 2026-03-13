@@ -1,18 +1,14 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::collections::BTreeMap;
 use std::{f32, fs};
 
-use ggez::graphics;
-use ggez::graphics::{Canvas, Color, DrawMode, Mesh, Rect};
-use image::png::PngEncoder;
-use image::{ColorType, ImageBuffer, Rgba};
-use npc_engine_core::StateDiffRef;
+use bioma_npc_core::StateDiffRef;
+use ggez::glam::Vec2;
+use ggez::graphics::{Color, DrawMode, DrawParam, Mesh, Rect};
 
-use crate::{output_path, PostMCTSHookArgs, PostMCTSHookFn, WorldState, SPRITE_SIZE};
+use crate::{
+    output_path, screenshot::render_rgba_image, PostMCTSHookArgs, PostMCTSHookFn, WorldState,
+    SPRITE_SIZE,
+};
 
 // TODO
 pub fn heatmap_hook() -> PostMCTSHookFn {
@@ -27,7 +23,7 @@ pub fn heatmap_hook() -> PostMCTSHookFn {
                   mcts,
                   ..
               }| {
-            if let Some(ctx) = ctx {
+            if let Some(ctx) = ctx.as_deref_mut() {
                 struct HeatMapEntry {
                     visits: usize,
                     score: f32,
@@ -69,63 +65,51 @@ pub fn heatmap_hook() -> PostMCTSHookFn {
 
                 // Heatmap
                 {
-                    let canvas = Canvas::with_window_size(ctx).unwrap();
-                    graphics::set_canvas(ctx, Some(&canvas));
-                    graphics::clear(ctx, graphics::BLACK);
-
                     let rect = Mesh::new_rectangle(
                         ctx,
                         DrawMode::fill(),
-                        Rect::new(0 as f32, 0 as f32, SPRITE_SIZE, SPRITE_SIZE),
-                        graphics::WHITE,
+                        Rect::new(0.0, 0.0, SPRITE_SIZE, SPRITE_SIZE),
+                        Color::WHITE,
                     )
                     .unwrap();
 
-                    world.with_map_coordinates(ctx, |ctx| {
-                        for (&(x, y), entry) in &positions {
-                            let visits = entry.visits as f32 / max_visits as f32;
+                    let flipped_image_data = render_rgba_image(ctx, Color::BLACK, |ctx, canvas| {
+                        world.with_map_coordinates(canvas, |canvas| {
+                            for (&(x, y), entry) in &positions {
+                                let visits = entry.visits as f32 / max_visits as f32;
 
-                            // Cull visits that are not significant to avoid outliers
-                            if visits < 0.001 {
-                                continue;
+                                // Cull visits that are not significant to avoid outliers
+                                if visits < 0.001 {
+                                    continue;
+                                }
+
+                                let scores = (entry.score / entry.visits as f32 - worst_avg_score)
+                                    / (best_avg_score - worst_avg_score + f32::EPSILON);
+
+                                let mut green = scores;
+                                let mut red = 1. - scores;
+                                let max = red.max(green);
+
+                                // Normalize to max
+                                green /= max;
+                                red /= max;
+
+                                if visits > f32::EPSILON && scores > f32::EPSILON {
+                                    canvas.draw(
+                                        &rect,
+                                        DrawParam::default()
+                                            .dest(Vec2::new(
+                                                x as f32 * SPRITE_SIZE,
+                                                y as f32 * SPRITE_SIZE,
+                                            ))
+                                            .color(Color::new(red, green, 0.0, visits)),
+                                    );
+                                }
                             }
+                        });
 
-                            let scores = (entry.score / entry.visits as f32 - worst_avg_score)
-                                / (best_avg_score - worst_avg_score + f32::EPSILON);
-
-                            let mut green = scores;
-                            let mut red = 1. - scores;
-                            let max = red.max(green);
-
-                            // Normalize to max
-                            green /= max;
-                            red /= max;
-
-                            if visits > f32::EPSILON && scores > f32::EPSILON {
-                                graphics::draw(
-                                    ctx,
-                                    &rect,
-                                    (
-                                        [x as f32 * SPRITE_SIZE, y as f32 * SPRITE_SIZE],
-                                        Color::new(red, green, 0., visits),
-                                    ),
-                                )
-                                .unwrap();
-                            }
-                        }
+                        world.draw(ctx, canvas, assets);
                     });
-
-                    world.draw(ctx, assets);
-
-                    graphics::present(ctx).unwrap();
-                    let image = canvas.image();
-
-                    let width = image.width() as u32;
-                    let height = image.height() as u32;
-                    let image_data: ImageBuffer<Rgba<u8>, _> =
-                        ImageBuffer::from_raw(width, height, image.to_rgba8(ctx).unwrap()).unwrap();
-
-                    let flipped_image_data = image::imageops::flip_vertical(&image_data);
 
                     fs::create_dir_all(format!(
                         "{}/{}/heatmaps/agent{}/",
@@ -134,21 +118,14 @@ pub fn heatmap_hook() -> PostMCTSHookFn {
                         agent.0
                     ))
                     .unwrap();
-                    let file = fs::OpenOptions::new()
-                        .create(true)
-                        .write(true)
-                        .truncate(true)
-                        .open(format!(
+                    flipped_image_data
+                        .save(format!(
                             "{}/{}/heatmaps/agent{}/{:06}.png",
                             output_path(),
                             run.map(|n| n.to_string()).unwrap_or_default(),
                             agent.0,
                             turn
                         ))
-                        .unwrap();
-
-                    PngEncoder::new(file)
-                        .encode(&flipped_image_data, width, height, ColorType::Rgba8)
                         .unwrap();
                 }
             }

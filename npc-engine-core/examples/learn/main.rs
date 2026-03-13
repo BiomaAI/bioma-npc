@@ -1,17 +1,12 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
-use constants::{TICKS_PER_ROUND, TOTAL_WOOD};
-use domain::LearnDomain;
-use estimator::NNStateValueEstimator;
-use npc_engine_core::{
+use bioma_npc_core::{
     graphviz, ActiveTask, ActiveTasks, AgentId, IdleTask, MCTSConfiguration, StateValueEstimator,
     MCTS,
 };
-use npc_engine_utils::{run_simple_executor, ExecutorState, ExecutorStateLocal};
-use rand::{thread_rng, Rng};
+use bioma_npc_utils::{run_simple_executor, ExecutorState, ExecutorStateLocal};
+use constants::{TICKS_PER_ROUND, TOTAL_WOOD};
+use domain::LearnDomain;
+use estimator::NNStateValueEstimator;
+use rand::RngExt;
 use state::State;
 
 mod behavior;
@@ -40,19 +35,19 @@ impl LearnExecutorState {
 
 impl ExecutorStateLocal<LearnDomain> for LearnExecutorState {
     fn create_initial_state(&self) -> State {
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
         let mut map = [0; 14];
         for _tree in 0..TOTAL_WOOD {
-            let mut pos = rng.gen_range(0..14);
+            let mut pos = rng.random_range(0..14);
             while map[pos] >= 3 {
-                pos = rng.gen_range(0..14);
+                pos = rng.random_range(0..14);
             }
             map[pos] += 1;
         }
         State {
             map,
             wood_count: 0,
-            agent_pos: rng.gen_range(0..14),
+            agent_pos: rng.random_range(0..14),
         }
     }
 

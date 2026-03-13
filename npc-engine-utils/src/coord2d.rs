@@ -1,11 +1,6 @@
-/*
- *  SPDX-License-Identifier: Apache-2.0 OR MIT
- *  © 2020-2022 ETH Zurich and other contributors, see AUTHORS.txt for details
- */
-
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-use rand::Rng;
+use rand::RngExt;
 
 /// A 2-D integer coordinate type.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Default)]
@@ -51,9 +46,9 @@ impl Coord2D {
     }
     /// Generates a random value between 0 and range.
     pub fn rand_uniform(range: Coord2D) -> Self {
-        let mut rng = rand::thread_rng();
-        let x = rng.gen_range(0..range.x);
-        let y = rng.gen_range(0..range.y);
+        let mut rng = rand::rng();
+        let x = rng.random_range(0..range.x);
+        let y = rng.random_range(0..range.y);
         Self::new(x, y)
     }
     /// Manhattan distance between self and other.
