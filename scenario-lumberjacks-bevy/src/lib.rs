@@ -2,21 +2,30 @@ use std::collections::{HashMap, VecDeque};
 use std::mem::MaybeUninit;
 use std::path::PathBuf;
 use std::sync::Once;
+use std::time::Duration;
 use std::{fs, io, mem, process};
 
 use bevy::app::{AppExit, ScheduleRunnerPlugin};
 use bevy::asset::{AssetPlugin, AssetServer, LoadState};
+use bevy::camera::{Camera, RenderTarget};
+use bevy::image::BevyDefault as _;
 use bevy::prelude::{
     default, App, ButtonInput, Camera2d, ClearColor, Color, Commands, Component, DefaultPlugins,
     Entity, Handle, Image, IntoScheduleConfigs, KeyCode, MessageReader, MessageWriter,
-    MinimalPlugins, Node, NonSendMut, PluginGroup, PositionType, Query, Res, ResMut, Resource,
-    Single, Sprite, Startup, Text, TextColor, TextFont, Transform, Update, Val, Vec2, With,
+    MinimalPlugins, Node, NonSend, NonSendMut, PluginGroup, PositionType, Query, Res, ResMut,
+    Resource, Single, Sprite, Startup, Text, TextColor, TextFont, Transform, Update, Val, Vec2,
+    With,
 };
-use bevy::render::{render_resource::PipelineCache, ExtractSchedule, MainWorld, RenderApp};
+use bevy::render::{
+    render_resource::{PipelineCache, TextureFormat},
+    ExtractSchedule, MainWorld, RenderApp,
+};
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
+use bevy::ui::UiTargetCamera;
 use bevy::window::{
     ExitCondition, PrimaryWindow, Window, WindowCloseRequested, WindowPlugin, WindowResolution,
 };
+use bevy::winit::WinitPlugin;
 use bioma_npc_core::AgentId;
 use clap::{Arg, ArgAction, Command};
 use serde_json::Value;
@@ -72,6 +81,21 @@ struct VisualState {
     sim: SimulationState,
     pending_step: Option<PreparedStep>,
     dirty: bool,
+}
+
+#[derive(Resource, Clone, Copy)]
+struct SceneCamera(Entity);
+
+#[derive(Resource, Clone)]
+enum CaptureSource {
+    PrimaryWindow,
+    Image(Handle<Image>),
+}
+
+#[derive(Resource, Clone, Copy, PartialEq, Eq)]
+enum RuntimeMode {
+    Visual,
+    Headless,
 }
 
 #[derive(Resource, Default)]
@@ -360,6 +384,13 @@ fn run_headless() {
         .turns
         .expect("Running batch mode with no turn limit!");
 
+    if config().analytics.screenshot || config().analytics.heatmaps {
+        for run in 0..config().batch.runs {
+            run_headless_rendered(run);
+        }
+        return;
+    }
+
     App::new()
         .add_plugins(MinimalPlugins.set(ScheduleRunnerPlugin::run_once()))
         .add_systems(Update, move |mut exit: MessageWriter<AppExit>| {
@@ -380,6 +411,90 @@ fn run_headless() {
 
             exit.write(AppExit::Success);
         })
+        .run();
+}
+
+fn run_headless_rendered(run: usize) {
+    let sim = SimulationState::new(config().display.interactive, Some(run), next_seed(), false);
+    let width = ((2 * config().display.padding.0 + sim.width()) as f32 * SPRITE_SIZE).round()
+        as u32;
+    let height = ((2 * config().display.padding.1 + sim.height()) as f32 * SPRITE_SIZE).round()
+        as u32;
+    sim.dump_run();
+
+    let mut capture_state = VisualCaptureState::default();
+    if !config().analytics.screenshot {
+        capture_state.start_requested = true;
+        capture_state.result_requested = true;
+    }
+
+    App::new()
+        .add_plugins(
+            DefaultPlugins
+                .set(AssetPlugin {
+                    file_path: workspace_root().display().to_string(),
+                    ..default()
+                })
+                .set(WindowPlugin {
+                    primary_window: None,
+                    exit_condition: ExitCondition::DontExit,
+                    ..default()
+                })
+                .disable::<WinitPlugin>(),
+        )
+        .add_plugins(PipelinesReadyPlugin)
+        .add_plugins(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / 60.0)))
+        .insert_resource(RuntimeMode::Headless)
+        .insert_resource(ClearColor(Color::srgb(
+            config().display.background.0,
+            config().display.background.1,
+            config().display.background.2,
+        )))
+        .insert_resource(VisualAssetsState::default())
+        .insert_resource(capture_state)
+        .insert_non_send_resource(VisualState {
+            sim,
+            pending_step: None,
+            dirty: true,
+        })
+        .add_systems(
+            Startup,
+            (
+                move |mut commands: Commands, mut images: ResMut<bevy::prelude::Assets<Image>>| {
+                    let image = Image::new_target_texture(
+                        width.max(1),
+                        height.max(1),
+                        TextureFormat::bevy_default(),
+                        None,
+                    );
+                    let target = images.add(image);
+                    let camera = commands
+                        .spawn((
+                            Camera2d,
+                            Camera::default(),
+                            RenderTarget::Image(target.clone().into()),
+                        ))
+                        .id();
+                    commands.insert_resource(SceneCamera(camera));
+                    commands.insert_resource(CaptureSource::Image(target));
+                },
+                load_sprite_handles,
+            ),
+        )
+        .add_systems(
+            Update,
+            (
+                update_visual_asset_state,
+                refresh_visual_capture_state,
+                queue_base_visual_captures,
+                advance_headless_simulation,
+                queue_pending_step_captures,
+                sync_visual_scene,
+                issue_capture_requests,
+                exit_headless_when_done,
+            )
+                .chain(),
+        )
         .run();
 }
 
@@ -411,6 +526,8 @@ fn run_visual() {
                 }),
         )
         .add_plugins(PipelinesReadyPlugin)
+        .insert_resource(RuntimeMode::Visual)
+        .insert_resource(CaptureSource::PrimaryWindow)
         .insert_resource(ClearColor(Color::srgb(
             config().display.background.0,
             config().display.background.1,
@@ -423,7 +540,7 @@ fn run_visual() {
             pending_step: None,
             dirty: true,
         })
-        .add_systems(Startup, (setup_camera, load_sprite_handles))
+        .add_systems(Startup, (setup_visual_camera, load_sprite_handles))
         .add_systems(
             Update,
             (
@@ -434,7 +551,7 @@ fn run_visual() {
                 advance_visual_simulation,
                 queue_pending_step_captures,
                 sync_visual_scene,
-                issue_visual_capture_requests,
+                issue_capture_requests,
                 exit_after_visual_captures,
             )
                 .chain(),
@@ -442,8 +559,9 @@ fn run_visual() {
         .run();
 }
 
-fn setup_camera(mut commands: Commands) {
-    commands.spawn(Camera2d);
+fn setup_visual_camera(mut commands: Commands) {
+    let camera = commands.spawn(Camera2d).id();
+    commands.insert_resource(SceneCamera(camera));
 }
 
 fn load_sprite_handles(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -540,10 +658,18 @@ fn refresh_visual_capture_state(
 
 fn queue_base_visual_captures(
     assets_state: Res<VisualAssetsState>,
+    mode: Res<RuntimeMode>,
     mut capture_state: ResMut<VisualCaptureState>,
     visual: NonSendMut<VisualState>,
 ) {
     if !assets_state.ready {
+        return;
+    }
+
+    let capture_snapshots = *mode == RuntimeMode::Visual || config().analytics.screenshot;
+    if !capture_snapshots {
+        capture_state.start_requested = true;
+        capture_state.result_requested = true;
         return;
     }
 
@@ -673,6 +799,7 @@ fn queue_pending_step_captures(
 fn sync_visual_scene(
     mut commands: Commands,
     assets_state: Res<VisualAssetsState>,
+    camera: Res<SceneCamera>,
     mut visual: NonSendMut<VisualState>,
     handles: Res<SpriteHandles>,
     existing: Query<Entity, With<VisualEntity>>,
@@ -694,6 +821,7 @@ fn sync_visual_scene(
                 ..default()
             },
             TextColor(Color::WHITE),
+            UiTargetCamera(camera.0),
             Node {
                 position_type: PositionType::Absolute,
                 left: Val::Px(12.0),
@@ -781,6 +909,7 @@ fn sync_visual_scene(
                     ..default()
                 },
                 TextColor(Color::WHITE),
+                UiTargetCamera(camera.0),
                 Node {
                     position_type: PositionType::Absolute,
                     left: Val::Px(sprite_size),
@@ -799,6 +928,7 @@ fn sync_visual_scene(
             ..default()
         },
         TextColor(Color::WHITE),
+        UiTargetCamera(camera.0),
         Node {
             position_type: PositionType::Absolute,
             left: Val::Px(5.0 * sprite_size),
@@ -810,8 +940,9 @@ fn sync_visual_scene(
     visual.dirty = false;
 }
 
-fn issue_visual_capture_requests(
+fn issue_capture_requests(
     mut commands: Commands,
+    capture_source: Res<CaptureSource>,
     mut capture_state: ResMut<VisualCaptureState>,
     screenshot_requests: Query<Entity, With<Screenshot>>,
 ) {
@@ -825,9 +956,18 @@ fn issue_visual_capture_requests(
     let path = request.path.clone();
     capture_state.active_request = Some(request);
 
-    commands
-        .spawn(Screenshot::primary_window())
-        .observe(save_to_disk(path));
+    match capture_source.as_ref() {
+        CaptureSource::PrimaryWindow => {
+            commands
+                .spawn(Screenshot::primary_window())
+                .observe(save_to_disk(path));
+        }
+        CaptureSource::Image(image) => {
+            commands
+                .spawn(Screenshot::image(image.clone()))
+                .observe(save_to_disk(path));
+        }
+    }
 }
 
 fn exit_after_visual_captures(
@@ -836,6 +976,59 @@ fn exit_after_visual_captures(
     mut exit: MessageWriter<AppExit>,
 ) {
     if capture_state.exit_when_done
+        && capture_state.queue.is_empty()
+        && capture_state.active_request.is_none()
+        && screenshot_requests.is_empty()
+    {
+        exit.write(AppExit::Success);
+    }
+}
+
+fn advance_headless_simulation(
+    assets_state: Res<VisualAssetsState>,
+    capture_state: Res<VisualCaptureState>,
+    screenshot_requests: Query<Entity, With<Screenshot>>,
+    mut visual: NonSendMut<VisualState>,
+) {
+    if !assets_state.ready || visual.sim.is_finalized() {
+        return;
+    }
+
+    if !capture_state.start_requested
+        || !capture_state.queue.is_empty()
+        || capture_state.active_request.is_some()
+        || !screenshot_requests.is_empty()
+    {
+        return;
+    }
+
+    if let Some(step) = visual.pending_step.take() {
+        visual.sim.apply_prepared_step(step);
+        visual.dirty = true;
+        return;
+    }
+
+    if let Some(step) = visual.sim.prepare_step() {
+        if step.heatmap().is_some() {
+            visual.pending_step = Some(step);
+        } else {
+            visual.sim.apply_prepared_step(step);
+        }
+        visual.dirty = true;
+    }
+}
+
+fn exit_headless_when_done(
+    capture_state: Res<VisualCaptureState>,
+    screenshot_requests: Query<Entity, With<Screenshot>>,
+    visual: NonSend<VisualState>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    if config().analytics.screenshot && !capture_state.result_requested {
+        return;
+    }
+
+    if visual.sim.is_finalized()
         && capture_state.queue.is_empty()
         && capture_state.active_request.is_none()
         && screenshot_requests.is_empty()
