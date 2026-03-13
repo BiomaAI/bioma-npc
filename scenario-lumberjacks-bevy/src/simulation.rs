@@ -114,6 +114,10 @@ impl SimulationState {
         self.turn
     }
 
+    pub fn at_turn_start(&self) -> bool {
+        self.current_agent == 0
+    }
+
     pub fn width(&self) -> usize {
         self.world.map.width
     }

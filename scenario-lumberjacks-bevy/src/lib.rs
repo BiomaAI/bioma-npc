@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::mem::MaybeUninit;
 use std::path::PathBuf;
 use std::sync::Once;
@@ -13,6 +13,7 @@ use bevy::prelude::{
     Single, Sprite, Startup, Text, TextColor, TextFont, Transform, Update, Val, With,
 };
 use bevy::render::{render_resource::PipelineCache, ExtractSchedule, MainWorld, RenderApp};
+use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 use bevy::window::{
     ExitCondition, PrimaryWindow, Window, WindowCloseRequested, WindowPlugin, WindowResolution,
 };
@@ -77,6 +78,15 @@ struct VisualAssetsState {
     confirmation_frames: usize,
 }
 
+#[derive(Resource, Default)]
+struct VisualCaptureState {
+    queue: VecDeque<PathBuf>,
+    start_requested: bool,
+    result_requested: bool,
+    last_turn_requested: Option<usize>,
+    exit_when_done: bool,
+}
+
 struct PipelinesReadyPlugin;
 
 impl bevy::app::Plugin for PipelinesReadyPlugin {
@@ -99,6 +109,13 @@ fn inventory_rows(world: &WorldGlobalState) -> Vec<(AgentId, isize, bool)> {
         .collect::<Vec<_>>();
     agents.sort_by_key(|(agent, ..)| *agent);
     agents
+}
+
+fn enqueue_visual_capture(queue: &mut VecDeque<PathBuf>, path: PathBuf) {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).unwrap();
+    }
+    queue.push_back(path);
 }
 
 unsafe fn init() {
@@ -349,13 +366,12 @@ fn run_headless() {
 }
 
 fn run_visual() {
-    let sim = SimulationState::new(config().display.interactive, None, next_seed(), true);
+    let sim = SimulationState::new(config().display.interactive, None, next_seed(), false);
     let width = ((2 * config().display.padding.0 + sim.width()) as f32 * SPRITE_SIZE).round()
         as u32;
     let height = ((2 * config().display.padding.1 + sim.height()) as f32 * SPRITE_SIZE).round()
         as u32;
     sim.dump_run();
-    sim.write_start_artifacts();
 
     App::new()
         .add_plugins(
@@ -383,6 +399,7 @@ fn run_visual() {
             config().display.background.2,
         )))
         .insert_resource(VisualAssetsState::default())
+        .insert_resource(VisualCaptureState::default())
         .insert_non_send_resource(VisualState { sim, dirty: true })
         .add_systems(Startup, (setup_camera, load_sprite_handles))
         .add_systems(
@@ -392,6 +409,9 @@ fn run_visual() {
                 update_visual_asset_state,
                 advance_visual_simulation,
                 sync_visual_scene,
+                queue_visual_captures,
+                issue_visual_capture_requests,
+                exit_after_visual_captures,
             )
                 .chain(),
         )
@@ -412,12 +432,19 @@ fn load_sprite_handles(mut commands: Commands, asset_server: Res<AssetServer>) {
 
 fn handle_close_requests(
     mut requests: MessageReader<WindowCloseRequested>,
+    mut capture_state: ResMut<VisualCaptureState>,
     mut visual: NonSendMut<VisualState>,
-    mut exit: MessageWriter<AppExit>,
 ) {
     if requests.read().next().is_some() {
         visual.sim.finalize();
-        exit.write(AppExit::Success);
+        if !capture_state.result_requested {
+            enqueue_visual_capture(
+                &mut capture_state.queue,
+                PathBuf::from(visual.sim.output_dir()).join("result.png"),
+            );
+            capture_state.result_requested = true;
+        }
+        capture_state.exit_when_done = true;
     }
 }
 
@@ -467,8 +494,9 @@ fn update_pipelines_ready(mut main_world: ResMut<MainWorld>, pipelines: Res<Pipe
 fn advance_visual_simulation(
     input: Res<ButtonInput<KeyCode>>,
     assets_state: Res<VisualAssetsState>,
+    capture_state: Res<VisualCaptureState>,
+    screenshot_requests: Query<Entity, With<Screenshot>>,
     mut visual: NonSendMut<VisualState>,
-    mut exit: MessageWriter<AppExit>,
     mut window: Single<&mut Window, With<PrimaryWindow>>,
 ) {
     if !assets_state.ready {
@@ -479,7 +507,13 @@ fn advance_visual_simulation(
     window.title = visual.sim.window_title();
 
     if visual.sim.is_finalized() {
-        exit.write(AppExit::Success);
+        return;
+    }
+
+    if !capture_state.start_requested
+        || !capture_state.queue.is_empty()
+        || !screenshot_requests.is_empty()
+    {
         return;
     }
 
@@ -488,10 +522,6 @@ fn advance_visual_simulation(
         visual.sim.step();
         visual.dirty = true;
         window.title = visual.sim.window_title();
-    }
-
-    if visual.sim.is_finalized() {
-        exit.write(AppExit::Success);
     }
 }
 
@@ -614,4 +644,76 @@ fn sync_visual_scene(
     ));
 
     visual.dirty = false;
+}
+
+fn queue_visual_captures(
+    assets_state: Res<VisualAssetsState>,
+    mut capture_state: ResMut<VisualCaptureState>,
+    visual: NonSendMut<VisualState>,
+) {
+    if !assets_state.ready {
+        return;
+    }
+
+    if !capture_state.start_requested {
+        enqueue_visual_capture(
+            &mut capture_state.queue,
+            PathBuf::from(visual.sim.output_dir()).join("start.png"),
+        );
+        capture_state.start_requested = true;
+    }
+
+    if config().analytics.screenshot
+        && !visual.sim.is_finalized()
+        && visual.sim.at_turn_start()
+        && capture_state.last_turn_requested != Some(visual.sim.turn())
+    {
+        enqueue_visual_capture(
+            &mut capture_state.queue,
+            PathBuf::from(visual.sim.output_dir())
+                .join("screenshots")
+                .join(format!("turn{:06}.png", visual.sim.turn())),
+        );
+        capture_state.last_turn_requested = Some(visual.sim.turn());
+    }
+
+    if visual.sim.is_finalized() && !capture_state.result_requested {
+        enqueue_visual_capture(
+            &mut capture_state.queue,
+            PathBuf::from(visual.sim.output_dir()).join("result.png"),
+        );
+        capture_state.result_requested = true;
+        capture_state.exit_when_done = true;
+    }
+}
+
+fn issue_visual_capture_requests(
+    mut commands: Commands,
+    mut capture_state: ResMut<VisualCaptureState>,
+    screenshot_requests: Query<Entity, With<Screenshot>>,
+) {
+    if !screenshot_requests.is_empty() {
+        return;
+    }
+
+    let Some(path) = capture_state.queue.pop_front() else {
+        return;
+    };
+
+    commands
+        .spawn(Screenshot::primary_window())
+        .observe(save_to_disk(path));
+}
+
+fn exit_after_visual_captures(
+    capture_state: Res<VisualCaptureState>,
+    screenshot_requests: Query<Entity, With<Screenshot>>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    if capture_state.exit_when_done
+        && capture_state.queue.is_empty()
+        && screenshot_requests.is_empty()
+    {
+        exit.write(AppExit::Success);
+    }
 }
