@@ -125,7 +125,7 @@ pub fn sprite_name_for_tile(
 }
 
 pub fn inventory_sprite_name(agent: AgentId) -> &'static str {
-    if agent.0 % 2 == 0 {
+    if agent.0.is_multiple_of(2) {
         "OrangeRight"
     } else {
         "YellowRight"

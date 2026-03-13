@@ -10,7 +10,7 @@ use bevy::prelude::{
     default, App, ButtonInput, Camera2d, ClearColor, Color, Commands, Component, DefaultPlugins,
     Entity, Handle, Image, IntoScheduleConfigs, KeyCode, MessageReader, MessageWriter,
     MinimalPlugins, Node, NonSendMut, PluginGroup, PositionType, Query, Res, ResMut, Resource,
-    Single, Sprite, Startup, Text, TextColor, TextFont, Transform, Update, Val, With,
+    Single, Sprite, Startup, Text, TextColor, TextFont, Transform, Update, Val, Vec2, With,
 };
 use bevy::render::{render_resource::PipelineCache, ExtractSchedule, MainWorld, RenderApp};
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
@@ -38,6 +38,7 @@ mod tilemap;
 mod util;
 mod world;
 
+pub use analytics::*;
 pub use behaviors::*;
 pub use config::*;
 pub use graph::*;
@@ -52,7 +53,7 @@ pub use util::*;
 pub use world::*;
 
 use crate::assets::{sprite_name_for_tile, sprite_path, workspace_root, SPRITE_FILES};
-use crate::simulation::{next_seed, SimulationState};
+use crate::simulation::{next_seed, PreparedStep, SimulationState};
 
 static INIT: Once = Once::new();
 static mut CONFIG: MaybeUninit<Config> = MaybeUninit::uninit();
@@ -69,6 +70,7 @@ struct SpriteHandles(HashMap<&'static str, Handle<Image>>);
 
 struct VisualState {
     sim: SimulationState,
+    pending_step: Option<PreparedStep>,
     dirty: bool,
 }
 
@@ -78,12 +80,28 @@ struct VisualAssetsState {
     confirmation_frames: usize,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum VisualCaptureKind {
+    Start,
+    Turn { turn: usize },
+    Heatmap { turn: usize, agent: AgentId },
+    Result,
+}
+
+#[derive(Clone, Debug)]
+struct VisualCaptureRequest {
+    kind: VisualCaptureKind,
+    path: PathBuf,
+}
+
 #[derive(Resource, Default)]
 struct VisualCaptureState {
-    queue: VecDeque<PathBuf>,
+    queue: VecDeque<VisualCaptureRequest>,
+    active_request: Option<VisualCaptureRequest>,
     start_requested: bool,
     result_requested: bool,
     last_turn_requested: Option<usize>,
+    last_heatmap_requested: Option<(usize, AgentId)>,
     exit_when_done: bool,
 }
 
@@ -111,11 +129,11 @@ fn inventory_rows(world: &WorldGlobalState) -> Vec<(AgentId, isize, bool)> {
     agents
 }
 
-fn enqueue_visual_capture(queue: &mut VecDeque<PathBuf>, path: PathBuf) {
-    if let Some(parent) = path.parent() {
+fn enqueue_visual_capture(queue: &mut VecDeque<VisualCaptureRequest>, request: VisualCaptureRequest) {
+    if let Some(parent) = request.path.parent() {
         fs::create_dir_all(parent).unwrap();
     }
-    queue.push_back(path);
+    queue.push_back(request);
 }
 
 unsafe fn init() {
@@ -400,16 +418,22 @@ fn run_visual() {
         )))
         .insert_resource(VisualAssetsState::default())
         .insert_resource(VisualCaptureState::default())
-        .insert_non_send_resource(VisualState { sim, dirty: true })
+        .insert_non_send_resource(VisualState {
+            sim,
+            pending_step: None,
+            dirty: true,
+        })
         .add_systems(Startup, (setup_camera, load_sprite_handles))
         .add_systems(
             Update,
             (
                 handle_close_requests,
                 update_visual_asset_state,
+                refresh_visual_capture_state,
+                queue_base_visual_captures,
                 advance_visual_simulation,
+                queue_pending_step_captures,
                 sync_visual_scene,
-                queue_visual_captures,
                 issue_visual_capture_requests,
                 exit_after_visual_captures,
             )
@@ -436,11 +460,15 @@ fn handle_close_requests(
     mut visual: NonSendMut<VisualState>,
 ) {
     if requests.read().next().is_some() {
+        visual.pending_step = None;
         visual.sim.finalize();
         if !capture_state.result_requested {
             enqueue_visual_capture(
                 &mut capture_state.queue,
-                PathBuf::from(visual.sim.output_dir()).join("result.png"),
+                VisualCaptureRequest {
+                    kind: VisualCaptureKind::Result,
+                    path: PathBuf::from(visual.sim.output_dir()).join("result.png"),
+                },
             );
             capture_state.result_requested = true;
         }
@@ -491,6 +519,77 @@ fn update_pipelines_ready(mut main_world: ResMut<MainWorld>, pipelines: Res<Pipe
     }
 }
 
+fn refresh_visual_capture_state(
+    screenshot_requests: Query<Entity, With<Screenshot>>,
+    mut capture_state: ResMut<VisualCaptureState>,
+) {
+    if screenshot_requests.is_empty()
+        && let Some(request) = capture_state.active_request.take()
+    {
+        match request.kind {
+            VisualCaptureKind::Start | VisualCaptureKind::Result => {}
+            VisualCaptureKind::Turn { turn } => {
+                let _ = turn;
+            }
+            VisualCaptureKind::Heatmap { turn, agent } => {
+                let _ = (turn, agent);
+            }
+        }
+    }
+}
+
+fn queue_base_visual_captures(
+    assets_state: Res<VisualAssetsState>,
+    mut capture_state: ResMut<VisualCaptureState>,
+    visual: NonSendMut<VisualState>,
+) {
+    if !assets_state.ready {
+        return;
+    }
+
+    if !capture_state.start_requested {
+        enqueue_visual_capture(
+            &mut capture_state.queue,
+            VisualCaptureRequest {
+                kind: VisualCaptureKind::Start,
+                path: PathBuf::from(visual.sim.output_dir()).join("start.png"),
+            },
+        );
+        capture_state.start_requested = true;
+    }
+
+    if config().analytics.screenshot
+        && visual.pending_step.is_none()
+        && !visual.sim.is_finalized()
+        && visual.sim.at_turn_start()
+        && capture_state.last_turn_requested != Some(visual.sim.turn())
+    {
+        let turn = visual.sim.turn();
+        enqueue_visual_capture(
+            &mut capture_state.queue,
+            VisualCaptureRequest {
+                kind: VisualCaptureKind::Turn { turn },
+                path: PathBuf::from(visual.sim.output_dir())
+                    .join("screenshots")
+                    .join(format!("turn{:06}.png", turn)),
+            },
+        );
+        capture_state.last_turn_requested = Some(turn);
+    }
+
+    if visual.sim.is_finalized() && !capture_state.result_requested {
+        enqueue_visual_capture(
+            &mut capture_state.queue,
+            VisualCaptureRequest {
+                kind: VisualCaptureKind::Result,
+                path: PathBuf::from(visual.sim.output_dir()).join("result.png"),
+            },
+        );
+        capture_state.result_requested = true;
+        capture_state.exit_when_done = true;
+    }
+}
+
 fn advance_visual_simulation(
     input: Res<ButtonInput<KeyCode>>,
     assets_state: Res<VisualAssetsState>,
@@ -512,16 +611,62 @@ fn advance_visual_simulation(
 
     if !capture_state.start_requested
         || !capture_state.queue.is_empty()
+        || capture_state.active_request.is_some()
         || !screenshot_requests.is_empty()
     {
         return;
     }
 
-    let should_step = !visual.sim.interactive() || input.pressed(KeyCode::Enter);
-    if should_step {
-        visual.sim.step();
+    if let Some(step) = visual.pending_step.take() {
+        visual.sim.apply_prepared_step(step);
         visual.dirty = true;
         window.title = visual.sim.window_title();
+        return;
+    }
+
+    let should_step = !visual.sim.interactive() || input.pressed(KeyCode::Enter);
+    if should_step
+        && let Some(step) = visual.sim.prepare_step()
+    {
+        if step.heatmap().is_some() {
+            visual.pending_step = Some(step);
+        } else {
+            visual.sim.apply_prepared_step(step);
+        }
+        visual.dirty = true;
+        window.title = visual.sim.window_title();
+    }
+}
+
+fn queue_pending_step_captures(
+    assets_state: Res<VisualAssetsState>,
+    mut capture_state: ResMut<VisualCaptureState>,
+    visual: NonSendMut<VisualState>,
+) {
+    if !assets_state.ready {
+        return;
+    }
+
+    let Some(step) = visual.pending_step.as_ref() else {
+        return;
+    };
+
+    let key = (step.turn(), step.agent());
+    if step.heatmap().is_some() && capture_state.last_heatmap_requested != Some(key) {
+        enqueue_visual_capture(
+            &mut capture_state.queue,
+            VisualCaptureRequest {
+                kind: VisualCaptureKind::Heatmap {
+                    turn: step.turn(),
+                    agent: step.agent(),
+                },
+                path: PathBuf::from(visual.sim.output_dir())
+                    .join("heatmaps")
+                    .join(format!("agent{}", step.agent().0))
+                    .join(format!("{:06}.png", step.turn())),
+            },
+        );
+        capture_state.last_heatmap_requested = Some(key);
     }
 }
 
@@ -593,6 +738,25 @@ fn sync_visual_scene(
         }
     }
 
+    if let Some(step) = visual.pending_step.as_ref()
+        && let Some(heatmap) = step.heatmap()
+    {
+        for cell in &heatmap.cells {
+            commands.spawn((
+                VisualEntity,
+                Sprite::from_color(
+                    Color::srgba(cell.red, cell.green, 0.0, cell.alpha),
+                    Vec2::splat(sprite_size),
+                ),
+                Transform::from_xyz(
+                    origin_x + cell.x as f32 * sprite_size,
+                    origin_y - cell.y as f32 * sprite_size,
+                    0.5,
+                ),
+            ));
+        }
+    }
+
     if config().display.inventory {
         for (row, (agent, wood, water)) in inventory_rows.into_iter().enumerate() {
             let Some(handle) = handles.0.get(crate::assets::inventory_sprite_name(agent)) else {
@@ -646,59 +810,20 @@ fn sync_visual_scene(
     visual.dirty = false;
 }
 
-fn queue_visual_captures(
-    assets_state: Res<VisualAssetsState>,
-    mut capture_state: ResMut<VisualCaptureState>,
-    visual: NonSendMut<VisualState>,
-) {
-    if !assets_state.ready {
-        return;
-    }
-
-    if !capture_state.start_requested {
-        enqueue_visual_capture(
-            &mut capture_state.queue,
-            PathBuf::from(visual.sim.output_dir()).join("start.png"),
-        );
-        capture_state.start_requested = true;
-    }
-
-    if config().analytics.screenshot
-        && !visual.sim.is_finalized()
-        && visual.sim.at_turn_start()
-        && capture_state.last_turn_requested != Some(visual.sim.turn())
-    {
-        enqueue_visual_capture(
-            &mut capture_state.queue,
-            PathBuf::from(visual.sim.output_dir())
-                .join("screenshots")
-                .join(format!("turn{:06}.png", visual.sim.turn())),
-        );
-        capture_state.last_turn_requested = Some(visual.sim.turn());
-    }
-
-    if visual.sim.is_finalized() && !capture_state.result_requested {
-        enqueue_visual_capture(
-            &mut capture_state.queue,
-            PathBuf::from(visual.sim.output_dir()).join("result.png"),
-        );
-        capture_state.result_requested = true;
-        capture_state.exit_when_done = true;
-    }
-}
-
 fn issue_visual_capture_requests(
     mut commands: Commands,
     mut capture_state: ResMut<VisualCaptureState>,
     screenshot_requests: Query<Entity, With<Screenshot>>,
 ) {
-    if !screenshot_requests.is_empty() {
+    if capture_state.active_request.is_some() || !screenshot_requests.is_empty() {
         return;
     }
 
-    let Some(path) = capture_state.queue.pop_front() else {
+    let Some(request) = capture_state.queue.pop_front() else {
         return;
     };
+    let path = request.path.clone();
+    capture_state.active_request = Some(request);
 
     commands
         .spawn(Screenshot::primary_window())
@@ -712,6 +837,7 @@ fn exit_after_visual_captures(
 ) {
     if capture_state.exit_when_done
         && capture_state.queue.is_empty()
+        && capture_state.active_request.is_none()
         && screenshot_requests.is_empty()
     {
         exit.write(AppExit::Success);

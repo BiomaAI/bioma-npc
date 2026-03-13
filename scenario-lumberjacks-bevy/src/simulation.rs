@@ -13,11 +13,35 @@ use crate::analytics;
 use crate::{
     agency_metric_hook, branching_metric_hook, config, diff_memory_metric_hook,
     features_metric_hook, graph_hook, islands_metric_hook, name, node_edges_count_metric_hook,
-    output_path, time_metric_hook, total_memory_metric_hook, world_serialization_hook,
-    working_dir, AgentInventory, GeneratorType, Lumberjacks, PostMCTSHookArgs, PostMCTSHookFn,
-    PostWorldHookArgs, PostWorldHookFn, PreWorldHookArgs, PreWorldHookFn, TileMap, WorldDiff,
-    WorldGlobalState,
+    output_path, time_metric_hook, total_memory_metric_hook, world_serialization_hook, working_dir,
+    Action, AgentInventory, GeneratorType, HeatmapOverlay, Lumberjacks, PostMCTSHookArgs,
+    PostMCTSHookFn, PostWorldHookArgs, PostWorldHookFn, PreWorldHookArgs, PreWorldHookFn,
+    TileMap, WorldDiff, WorldGlobalState, WorldLocalState,
 };
+
+pub struct PreparedStep {
+    turn: usize,
+    agent: AgentId,
+    initial_state: WorldLocalState,
+    diff: WorldDiff,
+    display_action: Action,
+    next_objective: Option<Box<dyn Task<Lumberjacks>>>,
+    heatmap: Option<HeatmapOverlay>,
+}
+
+impl PreparedStep {
+    pub fn turn(&self) -> usize {
+        self.turn
+    }
+
+    pub fn agent(&self) -> AgentId {
+        self.agent
+    }
+
+    pub fn heatmap(&self) -> Option<&HeatmapOverlay> {
+        self.heatmap.as_ref()
+    }
+}
 
 pub struct SimulationState {
     interactive: bool,
@@ -197,19 +221,15 @@ impl SimulationState {
         self.finalized = true;
     }
 
-    pub fn step(&mut self) {
+    pub fn prepare_step(&mut self) -> Option<PreparedStep> {
         if self.finalized {
-            return;
+            return None;
         }
 
         let turn = self.turn;
         let run = self.run;
 
         if self.current_agent == 0 {
-            if config().analytics.screenshot {
-                analytics::save_turn_screenshot(self.world(), run, turn);
-            }
-
             let world = &self.world;
             self.pre_world_hooks
                 .iter_mut()
@@ -224,9 +244,11 @@ impl SimulationState {
         let objective = mcts.run().unwrap();
         println!("planning end");
 
-        if config().analytics.heatmaps {
-            analytics::save_heatmap(self.world(), run, turn, agent, &mcts);
-        }
+        let heatmap = config()
+            .analytics
+            .heatmaps
+            .then(|| analytics::build_heatmap_overlay(agent, &mcts))
+            .flatten();
 
         let world = &self.world;
         self.post_mcts_hooks.iter_mut().for_each(|hook| {
@@ -242,16 +264,38 @@ impl SimulationState {
 
         let mut diff = WorldDiff::default();
         let mcts_ctx = ContextMut::with_state_and_diff(0, mcts.initial_state(), &mut diff, agent);
-        let new_objective = objective.execute(mcts_ctx);
-        Lumberjacks::apply(&mut self.world, mcts.initial_state(), &diff);
-        self.world.actions.insert(agent, objective.display_action());
-        new_objective.map(|next| self.objectives.insert(agent, next));
+        let next_objective = objective.execute(mcts_ctx);
+        let display_action = objective.display_action();
+
+        Some(PreparedStep {
+            turn,
+            agent,
+            initial_state: mcts.initial_state().clone(),
+            diff,
+            display_action,
+            next_objective,
+            heatmap,
+        })
+    }
+
+    pub fn apply_prepared_step(&mut self, step: PreparedStep) {
+        if self.finalized {
+            return;
+        }
+
+        debug_assert_eq!(step.turn, self.turn);
+        debug_assert_eq!(step.agent, self.agents[self.current_agent]);
+
+        Lumberjacks::apply(&mut self.world, &step.initial_state, &step.diff);
+        self.world.actions.insert(step.agent, step.display_action);
+        step.next_objective
+            .map(|next| self.objectives.insert(step.agent, next));
 
         let world = &self.world;
         self.post_world_hooks.iter_mut().for_each(|hook| {
             hook(PostWorldHookArgs {
-                run,
-                turn,
+                run: self.run,
+                turn: self.turn,
                 world,
                 objectives: &self.objectives,
             })
@@ -268,6 +312,34 @@ impl SimulationState {
         {
             self.finalize();
         }
+    }
+
+    pub fn step(&mut self) {
+        if self.finalized {
+            return;
+        }
+
+        if self.current_agent == 0 && config().analytics.screenshot {
+            analytics::save_turn_screenshot(self.world(), self.run, self.turn);
+        }
+
+        let Some(step) = self.prepare_step() else {
+            return;
+        };
+
+        if let Some(heatmap) = step.heatmap() {
+            analytics::save_heatmap_overlay(
+                self.world(),
+                Path::new(output_path())
+                    .join(self.run.map(|n| n.to_string()).unwrap_or_default())
+                    .join("heatmaps")
+                    .join(format!("agent{}", step.agent().0))
+                    .join(format!("{:06}.png", step.turn())),
+                heatmap,
+            );
+        }
+
+        self.apply_prepared_step(step);
     }
 
     fn register_hooks(&mut self) {

@@ -126,6 +126,26 @@ fn draw_bitmap_text(
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct HeatmapCell {
+    pub x: isize,
+    pub y: isize,
+    pub red: f32,
+    pub green: f32,
+    pub alpha: f32,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct HeatmapOverlay {
+    pub cells: Vec<HeatmapCell>,
+}
+
+impl HeatmapOverlay {
+    pub fn is_empty(&self) -> bool {
+        self.cells.is_empty()
+    }
+}
+
 pub fn render_world_image(world: &WorldGlobalState) -> RgbaImage {
     let sprite_size = sprite_size();
     let padding = config().display.padding;
@@ -201,13 +221,10 @@ pub fn save_turn_screenshot(world: &WorldGlobalState, run: Option<usize>, turn: 
     );
 }
 
-pub fn save_heatmap(
-    world: &WorldGlobalState,
-    run: Option<usize>,
-    turn: usize,
+pub fn build_heatmap_overlay(
     agent: AgentId,
     mcts: &MCTS<Lumberjacks>,
-) {
+) -> Option<HeatmapOverlay> {
     struct HeatMapEntry {
         visits: usize,
         score: f32,
@@ -244,14 +261,10 @@ pub fn save_heatmap(
     });
 
     if max_visits == 0 {
-        return;
+        return None;
     }
 
-    let sprite_size = sprite_size();
-    let padding = config().display.padding;
-    let offset_x = padding.0 as u32 * sprite_size;
-    let offset_y = padding.1 as u32 * sprite_size;
-    let mut image = render_world_image(world);
+    let mut overlay = HeatmapOverlay::default();
 
     for (&(x, y), entry) in &positions {
         let visits = entry.visits as f32 / max_visits as f32;
@@ -268,27 +281,70 @@ pub fn save_heatmap(
         green /= max;
         red /= max;
 
-        let overlay = Rgba([
-            (red.clamp(0.0, 1.0) * 255.0).round() as u8,
-            (green.clamp(0.0, 1.0) * 255.0).round() as u8,
+        overlay.cells.push(HeatmapCell {
+            x,
+            y,
+            red: red.clamp(0.0, 1.0),
+            green: green.clamp(0.0, 1.0),
+            alpha: visits.clamp(0.0, 1.0),
+        });
+    }
+
+    if overlay.is_empty() {
+        None
+    } else {
+        Some(overlay)
+    }
+}
+
+pub fn save_heatmap_overlay(
+    world: &WorldGlobalState,
+    path: impl AsRef<Path>,
+    overlay: &HeatmapOverlay,
+) {
+    let sprite_size = sprite_size();
+    let padding = config().display.padding;
+    let offset_x = padding.0 as u32 * sprite_size;
+    let offset_y = padding.1 as u32 * sprite_size;
+    let mut image = render_world_image(world);
+
+    for cell in &overlay.cells {
+        let color = Rgba([
+            (cell.red * 255.0).round() as u8,
+            (cell.green * 255.0).round() as u8,
             0,
-            (visits.clamp(0.0, 1.0) * 255.0).round() as u8,
+            (cell.alpha * 255.0).round() as u8,
         ]);
 
         draw_overlay_rect(
             &mut image,
-            offset_x + x.max(0) as u32 * sprite_size,
-            offset_y + y.max(0) as u32 * sprite_size,
+            offset_x + cell.x.max(0) as u32 * sprite_size,
+            offset_y + cell.y.max(0) as u32 * sprite_size,
             sprite_size,
-            overlay,
+            color,
         );
     }
+
+    let path = path.as_ref();
+    ensure_parent(path);
+    image.save(path).unwrap();
+}
+
+pub fn save_heatmap(
+    world: &WorldGlobalState,
+    run: Option<usize>,
+    turn: usize,
+    agent: AgentId,
+    mcts: &MCTS<Lumberjacks>,
+) {
+    let Some(overlay) = build_heatmap_overlay(agent, mcts) else {
+        return;
+    };
 
     let path = Path::new(output_path())
         .join(run.map(|n| n.to_string()).unwrap_or_default())
         .join("heatmaps")
         .join(format!("agent{}", agent.0))
         .join(format!("{:06}.png", turn));
-    ensure_parent(&path);
-    image.save(path).unwrap();
+    save_heatmap_overlay(world, path, &overlay);
 }
