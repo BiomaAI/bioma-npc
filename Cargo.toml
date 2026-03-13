@@ -2,8 +2,9 @@
 members = [
     "npc-engine-core",
     "npc-engine-utils",
-    "scenario-lumberjacks"
+    "scenario-lumberjacks",
 ]
+exclude = ["scenario-lumberjacks-bevy"]
 resolver = "2"
 
 [profile.bench]
