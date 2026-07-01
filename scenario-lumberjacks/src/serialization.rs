@@ -1,6 +1,6 @@
 use std::fs;
 
-use crate::{output_path, PreWorldHookArgs, PreWorldHookFn};
+use crate::{PreWorldHookArgs, PreWorldHookFn, output_path};
 
 pub fn world_serialization_hook() -> PreWorldHookFn {
     Box::new(

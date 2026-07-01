@@ -6,7 +6,10 @@ use bioma_npc_core::AgentId;
 use crate::{Action, Tile};
 
 pub const SPRITE_FILES: &[(&str, &str)] = &[
-    ("ImpassableRock", "scenario-lumberjacks/assets/ImpassableRock.png"),
+    (
+        "ImpassableRock",
+        "scenario-lumberjacks/assets/ImpassableRock.png",
+    ),
     ("OrangeDown", "scenario-lumberjacks/assets/OrangeDown.png"),
     (
         "OrangeDownBarrier",
@@ -48,7 +51,10 @@ pub const SPRITE_FILES: &[(&str, &str)] = &[
     ("Tree3_3", "scenario-lumberjacks/assets/Tree3_3.png"),
     ("TreeSapling", "scenario-lumberjacks/assets/TreeSapling.png"),
     ("Well", "scenario-lumberjacks/assets/Well.png"),
-    ("WoodenBarrier", "scenario-lumberjacks/assets/WoodenBarrier.png"),
+    (
+        "WoodenBarrier",
+        "scenario-lumberjacks/assets/WoodenBarrier.png",
+    ),
     ("YellowDown", "scenario-lumberjacks/assets/YellowDown.png"),
     (
         "YellowDownBarrier",
@@ -101,10 +107,7 @@ pub fn sprite_path(name: &str) -> &'static str {
         .unwrap_or_else(|| panic!("unknown sprite: {name}"))
 }
 
-pub fn sprite_name_for_tile(
-    tile: &Tile,
-    actions: &BTreeMap<AgentId, Action>,
-) -> Option<String> {
+pub fn sprite_name_for_tile(tile: &Tile, actions: &BTreeMap<AgentId, Action>) -> Option<String> {
     match tile {
         Tile::Agent(agent) if actions.contains_key(agent) => Some(format!(
             "{}{}",

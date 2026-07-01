@@ -1,11 +1,11 @@
 use std::hash::Hash;
 
 use bioma_npc_core::{
-    impl_task_boxed_methods, Context, ContextMut, Domain, IdleTask, Task, TaskDuration,
+    Context, ContextMut, Domain, IdleTask, Task, TaskDuration, impl_task_boxed_methods,
 };
-use bioma_npc_utils::{Direction, DIRECTIONS};
+use bioma_npc_utils::{DIRECTIONS, Direction};
 
-use crate::{apply_direction, config, Action, Lumberjacks, Tile, WorldState, WorldStateMut};
+use crate::{Action, Lumberjacks, Tile, WorldState, WorldStateMut, apply_direction, config};
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Barrier {

@@ -5,8 +5,8 @@ use bioma_npc_utils::DIRECTIONS;
 use serde::Serialize;
 
 use crate::{
-    apply_direction, config, Action, AgentInventory, Inventory, InventoryDiff, InventorySnapshot,
-    Lumberjacks, Tile, TileMap, TileMapDiff, TileMapSnapshot,
+    Action, AgentInventory, Inventory, InventoryDiff, InventorySnapshot, Lumberjacks, Tile,
+    TileMap, TileMapDiff, TileMapSnapshot, apply_direction, config,
 };
 
 #[derive(Debug, Serialize, Clone)]

@@ -9,8 +9,8 @@ use serde_json::Value;
 
 use bioma_npc_core::{AgentId, StateDiffRef};
 
-use crate::fitnesses;
 use crate::Lumberjacks;
+use crate::fitnesses;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]

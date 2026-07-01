@@ -1,10 +1,10 @@
 use std::hash::Hash;
 
 use bioma_npc_core::{
-    impl_task_boxed_methods, Context, ContextMut, Domain, IdleTask, Task, TaskDuration,
+    Context, ContextMut, Domain, IdleTask, Task, TaskDuration, impl_task_boxed_methods,
 };
 
-use crate::{config, Action, Lumberjacks, WorldStateMut};
+use crate::{Action, Lumberjacks, WorldStateMut, config};
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Wait;

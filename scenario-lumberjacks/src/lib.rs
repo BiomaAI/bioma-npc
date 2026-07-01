@@ -9,10 +9,9 @@ use bevy::app::{AppExit, ScheduleRunnerPlugin};
 use bevy::asset::{AssetPlugin, AssetServer, LoadState};
 use bevy::camera::{Camera, RenderTarget};
 use bevy::ecs::system::SystemParam;
-use bevy::image::BevyDefault as _;
 use bevy::prelude::{
     App, Assets, ButtonInput, Camera2d, ClearColor, Color, Commands, Component, DefaultPlugins,
-    Entity, Handle, Image, IntoScheduleConfigs, KeyCode, MessageReader, MessageWriter,
+    Entity, FontSize, Handle, Image, IntoScheduleConfigs, KeyCode, MessageReader, MessageWriter,
     MinimalPlugins, Node, NonSend, NonSendMut, PluginGroup, PositionType, Query, Res, ResMut,
     Resource, Single, Sprite, Startup, Text, TextColor, TextFont, Transform, Update, Val, Vec2,
     With, default,
@@ -245,7 +244,7 @@ fn surface_size(sim: &SimulationState) -> (u32, u32) {
 }
 
 fn create_render_target(images: &mut Assets<Image>, width: u32, height: u32) -> Handle<Image> {
-    let image = Image::new_target_texture(width, height, TextureFormat::bevy_default(), None);
+    let image = Image::new_target_texture(width, height, TextureFormat::Rgba8UnormSrgb, None);
     images.add(image)
 }
 
@@ -539,7 +538,7 @@ fn run_headless_rendered_batch() {
         .insert_resource(HeadlessBatchState::new(config().batch.runs))
         .insert_resource(VisualAssetsState::default())
         .insert_resource(VisualCaptureState::for_mode(RuntimeMode::Headless))
-        .insert_non_send_resource(VisualState {
+        .insert_non_send(VisualState {
             sim,
             pending_step: None,
             dirty: true,
@@ -597,7 +596,7 @@ fn run_visual() {
         )))
         .insert_resource(VisualAssetsState::default())
         .insert_resource(VisualCaptureState::default())
-        .insert_non_send_resource(VisualState {
+        .insert_non_send(VisualState {
             sim,
             pending_step: None,
             dirty: true,
@@ -896,7 +895,7 @@ fn sync_visual_scene(
             VisualEntity,
             Text::new("Loading..."),
             TextFont {
-                font_size: SPRITE_SIZE * 0.9,
+                font_size: FontSize::Px(SPRITE_SIZE * 0.9),
                 ..default()
             },
             TextColor(Color::WHITE),
@@ -984,7 +983,7 @@ fn sync_visual_scene(
                 VisualEntity,
                 Text::new(format!(":{wood}, {water}")),
                 TextFont {
-                    font_size: sprite_size * 0.6,
+                    font_size: FontSize::Px(sprite_size * 0.6),
                     ..default()
                 },
                 TextColor(Color::WHITE),
@@ -1003,7 +1002,7 @@ fn sync_visual_scene(
         VisualEntity,
         Text::new(format!("Turn: {}", visual.sim.turn())),
         TextFont {
-            font_size: sprite_size * 0.7,
+            font_size: FontSize::Px(sprite_size * 0.7),
             ..default()
         },
         TextColor(Color::WHITE),

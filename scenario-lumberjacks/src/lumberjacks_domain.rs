@@ -4,8 +4,8 @@ use bioma_npc_core::{AgentId, AgentValue, Behavior, Context, Domain, StateDiffRe
 use bioma_npc_utils::GlobalDomain;
 
 use crate::{
-    config, Action, AgentInventory, Human, InventorySnapshot, Lumberjack, Tile, TileMapSnapshot,
-    WorldDiff, WorldGlobalState, WorldLocalState, WorldState,
+    Action, AgentInventory, Human, InventorySnapshot, Lumberjack, Tile, TileMapSnapshot, WorldDiff,
+    WorldGlobalState, WorldLocalState, WorldState, config,
 };
 
 pub struct Lumberjacks;

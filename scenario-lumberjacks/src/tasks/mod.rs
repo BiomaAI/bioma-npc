@@ -8,8 +8,8 @@ mod water;
 
 pub use barrier::*;
 pub use chop::*;
-pub use plant::*;
 pub use r#move::*;
+pub use plant::*;
 pub use refill::*;
 pub use wait::*;
 pub use water::*;

@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use bioma_npc_core::{AgentId, Task, MCTS};
+use bioma_npc_core::{AgentId, MCTS, Task};
 
 use crate::{Lumberjacks, WorldGlobalState};
 

@@ -3,11 +3,11 @@ use std::fs;
 use std::path::Path;
 use std::sync::OnceLock;
 
-use bioma_npc_core::{AgentId, StateDiffRef, MCTS};
+use crate::{Lumberjacks, SPRITE_SIZE, WorldGlobalState, WorldState, config, output_path};
+use bioma_npc_core::{AgentId, MCTS, StateDiffRef};
 use image::{GenericImage, Rgba, RgbaImage};
-use crate::{config, output_path, Lumberjacks, WorldGlobalState, WorldState, SPRITE_SIZE};
 
-use crate::assets::{inventory_sprite_name, sprite_name_for_tile, workspace_root, SPRITE_FILES};
+use crate::assets::{SPRITE_FILES, inventory_sprite_name, sprite_name_for_tile, workspace_root};
 
 fn sprite_cache() -> &'static BTreeMap<&'static str, RgbaImage> {
     static CACHE: OnceLock<BTreeMap<&'static str, RgbaImage>> = OnceLock::new();
@@ -63,28 +63,70 @@ fn draw_overlay_rect(image: &mut RgbaImage, left: u32, top: u32, size: u32, colo
 
 fn glyph_rows(ch: char) -> Option<[u8; 7]> {
     match ch {
-        '0' => Some([0b01110, 0b10001, 0b10011, 0b10101, 0b11001, 0b10001, 0b01110]),
-        '1' => Some([0b00100, 0b01100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110]),
-        '2' => Some([0b01110, 0b10001, 0b00001, 0b00010, 0b00100, 0b01000, 0b11111]),
-        '3' => Some([0b11110, 0b00001, 0b00001, 0b01110, 0b00001, 0b00001, 0b11110]),
-        '4' => Some([0b00010, 0b00110, 0b01010, 0b10010, 0b11111, 0b00010, 0b00010]),
-        '5' => Some([0b11111, 0b10000, 0b10000, 0b11110, 0b00001, 0b00001, 0b11110]),
-        '6' => Some([0b00110, 0b01000, 0b10000, 0b11110, 0b10001, 0b10001, 0b01110]),
-        '7' => Some([0b11111, 0b00001, 0b00010, 0b00100, 0b01000, 0b01000, 0b01000]),
-        '8' => Some([0b01110, 0b10001, 0b10001, 0b01110, 0b10001, 0b10001, 0b01110]),
-        '9' => Some([0b01110, 0b10001, 0b10001, 0b01111, 0b00001, 0b00010, 0b11100]),
-        ':' => Some([0b00000, 0b00100, 0b00100, 0b00000, 0b00100, 0b00100, 0b00000]),
-        ',' => Some([0b00000, 0b00000, 0b00000, 0b00000, 0b00110, 0b00100, 0b01000]),
-        '-' => Some([0b00000, 0b00000, 0b00000, 0b11111, 0b00000, 0b00000, 0b00000]),
+        '0' => Some([
+            0b01110, 0b10001, 0b10011, 0b10101, 0b11001, 0b10001, 0b01110,
+        ]),
+        '1' => Some([
+            0b00100, 0b01100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110,
+        ]),
+        '2' => Some([
+            0b01110, 0b10001, 0b00001, 0b00010, 0b00100, 0b01000, 0b11111,
+        ]),
+        '3' => Some([
+            0b11110, 0b00001, 0b00001, 0b01110, 0b00001, 0b00001, 0b11110,
+        ]),
+        '4' => Some([
+            0b00010, 0b00110, 0b01010, 0b10010, 0b11111, 0b00010, 0b00010,
+        ]),
+        '5' => Some([
+            0b11111, 0b10000, 0b10000, 0b11110, 0b00001, 0b00001, 0b11110,
+        ]),
+        '6' => Some([
+            0b00110, 0b01000, 0b10000, 0b11110, 0b10001, 0b10001, 0b01110,
+        ]),
+        '7' => Some([
+            0b11111, 0b00001, 0b00010, 0b00100, 0b01000, 0b01000, 0b01000,
+        ]),
+        '8' => Some([
+            0b01110, 0b10001, 0b10001, 0b01110, 0b10001, 0b10001, 0b01110,
+        ]),
+        '9' => Some([
+            0b01110, 0b10001, 0b10001, 0b01111, 0b00001, 0b00010, 0b11100,
+        ]),
+        ':' => Some([
+            0b00000, 0b00100, 0b00100, 0b00000, 0b00100, 0b00100, 0b00000,
+        ]),
+        ',' => Some([
+            0b00000, 0b00000, 0b00000, 0b00000, 0b00110, 0b00100, 0b01000,
+        ]),
+        '-' => Some([
+            0b00000, 0b00000, 0b00000, 0b11111, 0b00000, 0b00000, 0b00000,
+        ]),
         ' ' => Some([0, 0, 0, 0, 0, 0, 0]),
-        'a' => Some([0b00000, 0b00000, 0b01110, 0b00001, 0b01111, 0b10001, 0b01111]),
-        'e' => Some([0b00000, 0b00000, 0b01110, 0b10001, 0b11111, 0b10000, 0b01110]),
-        'f' => Some([0b00110, 0b01000, 0b01000, 0b11100, 0b01000, 0b01000, 0b01000]),
-        'l' => Some([0b01100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110]),
-        'r' => Some([0b00000, 0b00000, 0b10110, 0b11001, 0b10000, 0b10000, 0b10000]),
-        's' => Some([0b00000, 0b00000, 0b01111, 0b10000, 0b01110, 0b00001, 0b11110]),
-        't' => Some([0b00100, 0b00100, 0b11111, 0b00100, 0b00100, 0b00101, 0b00010]),
-        'u' => Some([0b00000, 0b00000, 0b10001, 0b10001, 0b10001, 0b10011, 0b01101]),
+        'a' => Some([
+            0b00000, 0b00000, 0b01110, 0b00001, 0b01111, 0b10001, 0b01111,
+        ]),
+        'e' => Some([
+            0b00000, 0b00000, 0b01110, 0b10001, 0b11111, 0b10000, 0b01110,
+        ]),
+        'f' => Some([
+            0b00110, 0b01000, 0b01000, 0b11100, 0b01000, 0b01000, 0b01000,
+        ]),
+        'l' => Some([
+            0b01100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110,
+        ]),
+        'r' => Some([
+            0b00000, 0b00000, 0b10110, 0b11001, 0b10000, 0b10000, 0b10000,
+        ]),
+        's' => Some([
+            0b00000, 0b00000, 0b01111, 0b10000, 0b01110, 0b00001, 0b11110,
+        ]),
+        't' => Some([
+            0b00100, 0b00100, 0b11111, 0b00100, 0b00100, 0b00101, 0b00010,
+        ]),
+        'u' => Some([
+            0b00000, 0b00000, 0b10001, 0b10001, 0b10001, 0b10011, 0b01101,
+        ]),
         _ => None,
     }
 }
@@ -150,7 +192,8 @@ pub fn render_world_image(world: &WorldGlobalState) -> RgbaImage {
     let sprite_size = sprite_size();
     let padding = config().display.padding;
     let width = (world.map.width + 2 * padding.0) as u32 * sprite_size;
-    let height = (world.map.height + 2 * padding.1.max(world.inventory.0.len())) as u32 * sprite_size;
+    let height =
+        (world.map.height + 2 * padding.1.max(world.inventory.0.len())) as u32 * sprite_size;
     let mut image = RgbaImage::from_pixel(width.max(1), height.max(1), background_color());
     let cache = sprite_cache();
 
@@ -166,7 +209,9 @@ pub fn render_world_image(world: &WorldGlobalState) -> RgbaImage {
             let sprite = cache
                 .get(inventory_sprite_name(agent))
                 .expect("inventory sprite present");
-            image.copy_from(sprite, 0, row as u32 * sprite_size).unwrap();
+            image
+                .copy_from(sprite, 0, row as u32 * sprite_size)
+                .unwrap();
             let text = format!(":{wood}, {water}");
             let text_height = 7 * 3;
             let text_top = row as u32 * sprite_size + (sprite_size.saturating_sub(text_height)) / 2;
@@ -221,10 +266,7 @@ pub fn save_turn_screenshot(world: &WorldGlobalState, run: Option<usize>, turn: 
     );
 }
 
-pub fn build_heatmap_overlay(
-    agent: AgentId,
-    mcts: &MCTS<Lumberjacks>,
-) -> Option<HeatmapOverlay> {
+pub fn build_heatmap_overlay(agent: AgentId, mcts: &MCTS<Lumberjacks>) -> Option<HeatmapOverlay> {
     struct HeatMapEntry {
         visits: usize,
         score: f32,

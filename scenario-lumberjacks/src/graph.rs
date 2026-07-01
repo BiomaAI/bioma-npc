@@ -2,7 +2,7 @@ use std::fs;
 
 use bioma_npc_core::graphviz::plot_mcts_tree;
 
-use crate::{output_path, PostMCTSHookArgs, PostMCTSHookFn};
+use crate::{PostMCTSHookArgs, PostMCTSHookFn, output_path};
 
 pub fn graph_hook() -> PostMCTSHookFn {
     Box::new(

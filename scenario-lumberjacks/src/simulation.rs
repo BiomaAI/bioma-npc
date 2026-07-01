@@ -4,19 +4,19 @@ use std::path::Path;
 use std::process;
 
 use bioma_npc_core::{
-    graphviz::set_graph_output_depth, AgentId, ContextMut, MCTSConfiguration, Task, MCTS,
+    AgentId, ContextMut, MCTS, MCTSConfiguration, Task, graphviz::set_graph_output_depth,
 };
 use bioma_npc_utils::GlobalDomain;
 use rand::random;
 
 use crate::analytics;
 use crate::{
-    agency_metric_hook, branching_metric_hook, config, diff_memory_metric_hook,
-    features_metric_hook, graph_hook, islands_metric_hook, name, node_edges_count_metric_hook,
-    output_path, time_metric_hook, total_memory_metric_hook, world_serialization_hook, working_dir,
     Action, AgentInventory, GeneratorType, HeatmapOverlay, Lumberjacks, PostMCTSHookArgs,
-    PostMCTSHookFn, PostWorldHookArgs, PostWorldHookFn, PreWorldHookArgs, PreWorldHookFn,
-    TileMap, WorldDiff, WorldGlobalState, WorldLocalState,
+    PostMCTSHookFn, PostWorldHookArgs, PostWorldHookFn, PreWorldHookArgs, PreWorldHookFn, TileMap,
+    WorldDiff, WorldGlobalState, WorldLocalState, agency_metric_hook, branching_metric_hook,
+    config, diff_memory_metric_hook, features_metric_hook, graph_hook, islands_metric_hook, name,
+    node_edges_count_metric_hook, output_path, time_metric_hook, total_memory_metric_hook,
+    working_dir, world_serialization_hook,
 };
 
 pub struct PreparedStep {
@@ -204,7 +204,10 @@ impl SimulationState {
 
     pub fn write_start_artifacts(&self) {
         if self.capture_snapshots {
-            analytics::save_world_png(self.world(), Path::new(&self.output_dir()).join("start.png"));
+            analytics::save_world_png(
+                self.world(),
+                Path::new(&self.output_dir()).join("start.png"),
+            );
         }
     }
 
@@ -214,7 +217,10 @@ impl SimulationState {
         }
 
         if self.capture_snapshots {
-            analytics::save_world_png(self.world(), Path::new(&self.output_dir()).join("result.png"));
+            analytics::save_world_png(
+                self.world(),
+                Path::new(&self.output_dir()).join("result.png"),
+            );
         }
 
         self.dump_result();

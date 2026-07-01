@@ -6,8 +6,8 @@ use bioma_npc_core::{Behavior, Context, Task};
 use bioma_npc_utils::DIRECTIONS;
 
 use crate::{
-    apply_direction, config, from_direction, Barrier, Chop, Lumberjacks, Map2D, Move, Plant,
-    Refill, Wait, Water, WorldState,
+    Barrier, Chop, Lumberjacks, Map2D, Move, Plant, Refill, Wait, Water, WorldState,
+    apply_direction, config, from_direction,
 };
 
 pub struct Lumberjack;
@@ -70,7 +70,7 @@ fn wavefront_expansion(
         *gradient_value = cost;
 
         // X lower bound
-        if x + radius >= start_x + 1 && pathfindable(x - 1, y) {
+        if x + radius > start_x && pathfindable(x - 1, y) {
             heap.push(WavefrontState {
                 cost: cost + 1,
                 position: (x - 1, y),
@@ -86,7 +86,7 @@ fn wavefront_expansion(
         }
 
         // Y lower bound
-        if y + radius >= start_y + 1 && pathfindable(x, y - 1) {
+        if y + radius > start_y && pathfindable(x, y - 1) {
             heap.push(WavefrontState {
                 cost: cost + 1,
                 position: (x, y - 1),
